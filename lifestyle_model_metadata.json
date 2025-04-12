@@ -1,0 +1,218 @@
+{
+    "model_name": "Breast Cancer Risk Assessment with Lifestyle Factors",
+    "best_model_type": "Tuned Gradient Boosting",
+    "version": "1.2",
+    "creation_date": "2025-04-12 17:00:30",
+    "hyperparameter_tuning_details (GB)": {
+        "method": "RandomizedSearchCV",
+        "params_searched": "{'n_estimators': <scipy.stats._distn_infrastructure.rv_discrete_frozen object at 0x0000020EEDA630E0>, 'learning_rate': [0.01, 0.05, 0.1, 0.2], 'max_depth': <scipy.stats._distn_infrastructure.rv_discrete_frozen object at 0x0000020EEDB1DF90>}",
+        "best_params": {
+            "learning_rate": 0.2,
+            "max_depth": 3,
+            "n_estimators": 260
+        },
+        "best_cv_score": 0.9895574728819095
+    },
+    "all_features": [
+        "mean radius",
+        "mean texture",
+        "mean perimeter",
+        "mean area",
+        "mean smoothness",
+        "mean compactness",
+        "mean concavity",
+        "mean concave points",
+        "mean symmetry",
+        "mean fractal dimension",
+        "radius error",
+        "texture error",
+        "perimeter error",
+        "area error",
+        "smoothness error",
+        "compactness error",
+        "concavity error",
+        "concave points error",
+        "symmetry error",
+        "fractal dimension error",
+        "worst radius",
+        "worst texture",
+        "worst perimeter",
+        "worst area",
+        "worst smoothness",
+        "worst compactness",
+        "worst concavity",
+        "worst concave points",
+        "worst symmetry",
+        "worst fractal dimension",
+        "physical_activity",
+        "diet_quality",
+        "stress_level",
+        "sleep_quality",
+        "alcohol_consumption",
+        "smoking_history",
+        "activity_immune_interaction",
+        "diet_cell_interaction",
+        "stress_immune_interaction"
+    ],
+    "selected_features": [
+        "mean radius",
+        "mean texture",
+        "mean perimeter",
+        "mean area",
+        "mean compactness",
+        "mean concavity",
+        "mean concave points",
+        "radius error",
+        "perimeter error",
+        "area error",
+        "worst radius",
+        "worst texture",
+        "worst perimeter",
+        "worst area",
+        "worst smoothness",
+        "worst compactness",
+        "worst concavity",
+        "worst concave points",
+        "worst symmetry",
+        "activity_immune_interaction"
+    ],
+    "model_performance_summary": {
+        "accuracy": 0.965,
+        "test_roc_auc": 0.994,
+        "cv_roc_auc_mean (from tuning if applicable)": 0.99,
+        "classification_report": {
+            "0": {
+                "precision": 0.975609756097561,
+                "recall": 0.9302325581395349,
+                "f1-score": 0.9523809523809523,
+                "support": 43.0
+            },
+            "1": {
+                "precision": 0.958904109589041,
+                "recall": 0.9859154929577465,
+                "f1-score": 0.9722222222222222,
+                "support": 71.0
+            },
+            "accuracy": 0.9649122807017544,
+            "macro avg": {
+                "precision": 0.9672569328433009,
+                "recall": 0.9580740255486406,
+                "f1-score": 0.9623015873015872,
+                "support": 114.0
+            },
+            "weighted avg": {
+                "precision": 0.9652053622194477,
+                "recall": 0.9649122807017544,
+                "f1-score": 0.9647382344750765,
+                "support": 114.0
+            }
+        }
+    },
+    "full_evaluation_results": {
+        "Logistic Regression": {
+            "accuracy": 0.982,
+            "test_roc_auc": 0.997,
+            "cv_roc_auc_mean (from tuning if applicable)": "N/A (Not Tuned)",
+            "classification_report": {
+                "0": {
+                    "precision": 1.0,
+                    "recall": 0.9534883720930233,
+                    "f1-score": 0.9761904761904762,
+                    "support": 43.0
+                },
+                "1": {
+                    "precision": 0.9726027397260274,
+                    "recall": 1.0,
+                    "f1-score": 0.9861111111111112,
+                    "support": 71.0
+                },
+                "accuracy": 0.9824561403508771,
+                "macro avg": {
+                    "precision": 0.9863013698630136,
+                    "recall": 0.9767441860465116,
+                    "f1-score": 0.9811507936507937,
+                    "support": 114.0
+                },
+                "weighted avg": {
+                    "precision": 0.9829367940398942,
+                    "recall": 0.9824561403508771,
+                    "f1-score": 0.9823691172375383,
+                    "support": 114.0
+                }
+            }
+        },
+        "Random Forest": {
+            "accuracy": 0.965,
+            "test_roc_auc": 0.996,
+            "cv_roc_auc_mean (from tuning if applicable)": "N/A (Not Tuned)",
+            "classification_report": {
+                "0": {
+                    "precision": 0.975609756097561,
+                    "recall": 0.9302325581395349,
+                    "f1-score": 0.9523809523809523,
+                    "support": 43.0
+                },
+                "1": {
+                    "precision": 0.958904109589041,
+                    "recall": 0.9859154929577465,
+                    "f1-score": 0.9722222222222222,
+                    "support": 71.0
+                },
+                "accuracy": 0.9649122807017544,
+                "macro avg": {
+                    "precision": 0.9672569328433009,
+                    "recall": 0.9580740255486406,
+                    "f1-score": 0.9623015873015872,
+                    "support": 114.0
+                },
+                "weighted avg": {
+                    "precision": 0.9652053622194477,
+                    "recall": 0.9649122807017544,
+                    "f1-score": 0.9647382344750765,
+                    "support": 114.0
+                }
+            }
+        },
+        "Tuned Gradient Boosting": {
+            "accuracy": 0.965,
+            "test_roc_auc": 0.994,
+            "cv_roc_auc_mean (from tuning if applicable)": 0.99,
+            "classification_report": {
+                "0": {
+                    "precision": 0.975609756097561,
+                    "recall": 0.9302325581395349,
+                    "f1-score": 0.9523809523809523,
+                    "support": 43.0
+                },
+                "1": {
+                    "precision": 0.958904109589041,
+                    "recall": 0.9859154929577465,
+                    "f1-score": 0.9722222222222222,
+                    "support": 71.0
+                },
+                "accuracy": 0.9649122807017544,
+                "macro avg": {
+                    "precision": 0.9672569328433009,
+                    "recall": 0.9580740255486406,
+                    "f1-score": 0.9623015873015872,
+                    "support": 114.0
+                },
+                "weighted avg": {
+                    "precision": 0.9652053622194477,
+                    "recall": 0.9649122807017544,
+                    "f1-score": 0.9647382344750765,
+                    "support": 114.0
+                }
+            }
+        }
+    },
+    "scaler_details": {
+        "type": "StandardScaler",
+        "n_features_in": 39
+    },
+    "selector_details": {
+        "type": "SelectFromModel",
+        "base_estimator": "RandomForestClassifier",
+        "threshold": "median"
+    }
+}

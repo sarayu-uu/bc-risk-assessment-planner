@@ -4,7 +4,7 @@ import numpy as np
 import json
 import os
 
-# Import the assessment function and constants from our utility file
+# Import the assessment function and constants from our utility files
 from risk_assessment_utils import assess_risk_and_plan, METADATA_FILENAME, LIFESTYLE_FEATURES_NAMES
 
 # --- Page Configuration ---

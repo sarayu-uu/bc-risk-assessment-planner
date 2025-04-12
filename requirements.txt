@@ -8,3 +8,4 @@ shap
 tk
 streamlit
 google-generativeai
+python-dotenv

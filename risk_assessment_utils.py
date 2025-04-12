@@ -6,7 +6,11 @@ import random
 import warnings
 from sklearn.exceptions import NotFittedError
 import google.generativeai as genai # Import Gemini library
-import os # To potentially read API key from environment
+import os # To read API key from environment
+from dotenv import load_dotenv # Import dotenv
+
+# --- Load Environment Variables --- 
+load_dotenv() # Load variables from .env file into environment
 
 # --- Constants (Centralized) ---
 LIFESTYLE_FEATURES_NAMES = [
@@ -22,28 +26,20 @@ SELECTOR_FILENAME = 'lifestyle_feature_selector.pkl'
 METADATA_FILENAME = 'lifestyle_model_metadata.json'
 
 # --- Configure Gemini API Key --- 
-# WARNING: Hardcoding keys is insecure. Use environment variables (os.getenv) or secrets management.
-# Replace \"YOUR_API_KEY\" with your actual key ONLY for temporary testing, or preferably set it as an environment variable.
-# Example using environment variable (recommended):
-# API_KEY = os.getenv(\"GOOGLE_API_KEY\")
-# if not API_KEY:
-#     print(\"Warning: GOOGLE_API_KEY environment variable not set.\")
-# else:
-#     genai.configure(api_key=API_KEY)
+API_KEY = os.getenv(\"GOOGLE_API_KEY\") # Read from environment
 
-# For this example, using the key provided (replace or secure this!):
-API_KEY = "AIzaSyCKp-JCh3Gmy_gc81Z2geEjwLve2np65T8" # Replacing entire line to ensure no hidden chars
-
-try:
-    genai.configure(api_key=API_KEY)
-    # Initialize the Gemini model
-    gemini_model = genai.GenerativeModel('gemini-2.0-flash')
-    print("Gemini API configured successfully.")
-    GEMINI_AVAILABLE = True
-except Exception as e:
-    print(f"Error configuring Gemini API: {e}. Dynamic plan generation will be disabled.")
-    GEMINI_AVAILABLE = False
-
+GEMINI_AVAILABLE = False # Default to False
+if not API_KEY:
+    print(\"\\nWARNING: GOOGLE_API_KEY not found in environment variables or .env file. Dynamic plan generation will be disabled.\\n\")
+else:
+    try:
+        genai.configure(api_key=API_KEY)
+        # Initialize the Gemini model
+        gemini_model = genai.GenerativeModel(\'gemini-pro\')
+        print(\"Gemini API configured successfully using environment variable.\")
+        GEMINI_AVAILABLE = True
+    except Exception as e:
+        print(f\"Error configuring Gemini API from environment variable: {e}. Dynamic plan generation will be disabled.\")
 
 # --- Enhanced Prevention Plan Generator with Dynamic Elements ---
 class PreventionPlanGenerator:

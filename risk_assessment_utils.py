@@ -26,20 +26,20 @@ SELECTOR_FILENAME = 'lifestyle_feature_selector.pkl'
 METADATA_FILENAME = 'lifestyle_model_metadata.json'
 
 # --- Configure Gemini API Key --- 
-API_KEY = os.getenv(\"GOOGLE_API_KEY\") # Read from environment
+API_KEY = os.getenv("GOOGLE_API_KEY") # Read from environment
 
 GEMINI_AVAILABLE = False # Default to False
 if not API_KEY:
-    print(\"\\nWARNING: GOOGLE_API_KEY not found in environment variables or .env file. Dynamic plan generation will be disabled.\\n\")
+    print("\nWARNING: GOOGLE_API_KEY not found in environment variables or .env file. Dynamic plan generation will be disabled.\n")
 else:
     try:
         genai.configure(api_key=API_KEY)
         # Initialize the Gemini model
-        gemini_model = genai.GenerativeModel(\'gemini-pro\')
-        print(\"Gemini API configured successfully using environment variable.\")
+        gemini_model = genai.GenerativeModel('gemini-pro')
+        print("Gemini API configured successfully using environment variable.")
         GEMINI_AVAILABLE = True
     except Exception as e:
-        print(f\"Error configuring Gemini API from environment variable: {e}. Dynamic plan generation will be disabled.\")
+        print(f"Error configuring Gemini API from environment variable: {e}. Dynamic plan generation will be disabled.")
 
 # --- Enhanced Prevention Plan Generator with Dynamic Elements ---
 class PreventionPlanGenerator:

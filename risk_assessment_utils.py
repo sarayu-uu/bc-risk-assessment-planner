@@ -35,8 +35,8 @@ else:
     try:
         genai.configure(api_key=API_KEY)
         # Initialize the Gemini model
-        gemini_model = genai.GenerativeModel('gemini-pro')
-        print("Gemini API configured successfully using environment variable.")
+        gemini_model = genai.GenerativeModel('gemini-1.5-flash')
+        print("Gemini API configured successfully using 'gemini-1.5-flash' model.")
         GEMINI_AVAILABLE = True
     except Exception as e:
         print(f"Error configuring Gemini API from environment variable: {e}. Dynamic plan generation will be disabled.")
@@ -166,7 +166,7 @@ class PreventionPlanGenerator:
         # --- Generate Dynamic Timeline & Monitoring using Gemini --- 
         if GEMINI_AVAILABLE:
             try:
-                print("Generating dynamic plan elements with Gemini...")
+                # print("Attempting to generate dynamic plan elements with Gemini...") # Removed debug print
                 # Using standard triple quotes for the prompt string
                 prompt = f'''
                 Generate a realistic, encouraging, and step-by-step health improvement plan for a patient.
@@ -196,6 +196,9 @@ class PreventionPlanGenerator:
                 
                 response = gemini_model.generate_content(prompt)
                 generated_text = response.text
+                # print(f"--- Gemini Raw Response ---") # Removed debug print
+                # print(generated_text) # Removed debug print
+                # print(f"--- End Gemini Raw Response ---") # Removed debug print
                 
                 # Parse the response (simple parsing based on expected headers)
                 timeline_items = []
@@ -216,32 +219,66 @@ class PreventionPlanGenerator:
                     elif current_section == 'monitoring' and line_stripped.startswith( ('* ', '- ') ):
                         monitoring_items.append(line_stripped[2:].strip())
                 
-                if timeline_items: plan['suggested_timeline'] = timeline_items
-                if monitoring_items: plan['monitoring_suggestions'] = monitoring_items
-                print("Dynamic elements generated successfully.")
+                if timeline_items:
+                    # print("Successfully parsed timeline from Gemini response.") # Removed debug print
+                    plan['suggested_timeline'] = timeline_items
+                else:
+                    # print("Could not parse timeline from Gemini response. Using fallback.") # Removed debug print
+                    # Restore original fallback if parsing fails but API call succeeded
+                    plan['suggested_timeline'] = [ # RESTORED HERE
+                        "Month 1-2: Focus on incorporating one small change consistently.",
+                        "Month 3-4: Gradually increase effort or add a second goal.",
+                        "Month 5-6: Evaluate progress and adjust goals.",
+                        "Ongoing: Maintain habits and regular check-ins."
+                    ]
+
+                if monitoring_items:
+                    # print("Successfully parsed monitoring suggestions from Gemini response.") # Removed debug print
+                    plan['monitoring_suggestions'] = monitoring_items
+                else:
+                    # print("Could not parse monitoring suggestions from Gemini response. Using fallback.") # Removed debug print
+                    # Restore original fallback if parsing fails but API call succeeded
+                    plan['monitoring_suggestions'] = [ # RESTORED HERE
+                        "Keep a journal or use a habit tracker.",
+                        "Check in on how you feel regularly.",
+                        "Schedule necessary health screenings.",
+                        "Discuss progress with healthcare provider."
+                    ]
                 
             except Exception as e:
-                print(f"Error calling Gemini API or parsing response: {e}. Using static fallback plan elements.")
-                # Use fallback if API fails
-                # Consider setting GEMINI_AVAILABLE = False if the error is persistent (like auth error)
-                # If it's a temporary network error, maybe allow retries later?
-        
-        # Fallback static plan if Gemini not available or failed
-        if not plan['suggested_timeline']:
-             plan['suggested_timeline'] = [
-                "Month 1: Focus on understanding recommendations and implementing 1-2 key changes.",
-                "Month 2-3: Build consistency, track progress, and potentially add 1 more recommendation.",
-                "Month 4-6: Evaluate what's working, adjust plan as needed, focus on long-term maintenance.",
-                "Ongoing: Regular self-monitoring and annual health check-ins."
+                # print(f"ERROR calling Gemini API or parsing response: {e}") # Removed debug print
+                print(f"Warning: Error during Gemini API call or parsing: {e}. Using static fallback plan elements.") # Keep a warning
+                # print("Falling back to 'AI not working' indicator.") # Removed debug print
+                # Restore original fallback in case of API error
+                plan['suggested_timeline'] = [ # RESTORED HERE
+                    "Month 1-2: Focus on incorporating one small change consistently.",
+                    "Month 3-4: Gradually increase effort or add a second goal.",
+                    "Month 5-6: Evaluate progress and adjust goals.",
+                    "Ongoing: Maintain habits and regular check-ins."
+                ]
+                plan['monitoring_suggestions'] = [ # RESTORED HERE
+                    "Keep a journal or use a habit tracker.",
+                    "Check in on how you feel regularly.",
+                    "Schedule necessary health screenings.",
+                    "Discuss progress with healthcare provider."
+                ]
+        else:
+             # print("Gemini API not available. Using fallback indicator.") # Removed debug print
+             # Restore original fallback if API is not available
+             plan['suggested_timeline'] = [ # RESTORED HERE
+                "Month 1-2: Focus on incorporating one small change consistently.",
+                "Month 3-4: Gradually increase effort or add a second goal.",
+                "Month 5-6: Evaluate progress and adjust goals.",
+                "Ongoing: Maintain habits and regular check-ins."
             ]
-        if not plan['monitoring_suggestions']:
-            plan['monitoring_suggestions'] = [
-                "Keep a simple journal or use an app to track targeted behaviors (e.g., activity minutes, sleep hours, stress triggers).",
-                "Schedule regular health check-ups and recommended screenings.",
-                "Reflect weekly or bi-weekly on progress, challenges, and successes."
+             plan['monitoring_suggestions'] = [ # RESTORED HERE
+                "Keep a journal or use a habit tracker.",
+                "Check in on how you feel regularly.",
+                "Schedule necessary health screenings.",
+                "Discuss progress with healthcare provider."
             ]
 
-        print("\n--- Prevention Plan Generated ---")
+        # print("\n--- Prevention Plan Generated ---") # Removed debug print
         return plan
 
 # --- Risk Assessment Function (Uses loaded components) ---

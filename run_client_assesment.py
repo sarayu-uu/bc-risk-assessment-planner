@@ -4,9 +4,12 @@ import joblib
 import json
 import random
 import warnings
+import os
+import genai
+import streamlit as st
 
 # Import the necessary function and constants from the utility file
-from risk_assessment_utils import assess_risk_and_plan, METADATA_FILENAME, ALL_FEATURE_NAMES
+from risk_assessment_utils import assess_risk_and_plan, METADATA_FILENAME, ALL_FEATURE_NAMES, LIFESTYLE_FEATURES_NAMES, INTERACTION_FEATURES_NAMES, GEMINI_AVAILABLE, gemini_model
 
 # Ignore convergence warnings if they pop up during loading/prediction
 warnings.filterwarnings('ignore', category=FutureWarning)
@@ -24,6 +27,23 @@ warnings.filterwarnings('ignore', category=ConvergenceWarning)
 # --- REMOVE assess_risk_and_plan Function Definition --- 
 # (It's now imported from risk_assessment_utils)
 
+# --- Configure Gemini API Key ---
+API_KEY = os.getenv("GOOGLE_API_KEY")
+
+GEMINI_AVAILABLE = False
+gemini_model = None # Initialize as None
+
+if not API_KEY:
+    print("\nWARNING: GOOGLE_API_KEY not found...")
+else:
+    try:
+        genai.configure(api_key=API_KEY)
+        gemini_model = genai.GenerativeModel('gemini-1.5-flash') # Or your chosen model
+        print(f"Gemini API configured successfully using '{gemini_model.model_name}' model.")
+        GEMINI_AVAILABLE = True
+    except Exception as e:
+        print(f"Error configuring Gemini API...")
+        gemini_model = None # Ensure it's None on error
 
 # --- AGENT INTERACTION STARTS HERE ---
 
@@ -125,3 +145,192 @@ if assessment and plan:
 
 else:
     print("\n--- Could not generate assessment and plan for the client. Check logs for errors. ---")
+
+# ---- ADD EXPORT IF NEEDED ----
+# If gemini_model wasn't automatically module-level, ensure it is:
+# (Your current code seems okay, but this is a safeguard)
+__all__ = [
+    'assess_risk_and_plan',
+    'PreventionPlanGenerator',
+    'GEMINI_AVAILABLE',
+    'gemini_model', # Make sure it's exported if needed by import *
+    'METADATA_FILENAME',
+    # ... other constants/functions you import elsewhere ...
+]
+
+# --- Streamlit App Layout ---
+st.set_page_config(layout="wide")
+st.title("Holistic Breast Cancer Risk Assessment & AI Planner")
+st.markdown("""
+Welcome! Please provide your details in the sidebar to receive a risk assessment
+and a personalized lifestyle plan suggestion. An AI Chatbot will be available below
+after generating a plan for general questions about breast cancer.
+""")
+
+# --- Sidebar Inputs ---
+with st.sidebar:
+    st.header("Input Patient Data")
+    # ... (Your existing sliders and expander for medical/lifestyle inputs) ...
+    assess_button = st.button("Assess Risk and Generate Plan", key="assess_button")
+
+# --- Main Area ---
+# Initialize placeholders for results if needed, or handle scope carefully
+assessment_result = None
+prevention_plan = None
+
+if assess_button:
+    # Prepare input_df from sidebar state
+    # ... (Your existing logic to collect inputs into client_lifestyle_data, client_medical_data) ...
+    # ... (Your existing logic to calculate interaction features) ...
+    # ... (Your existing logic to combine data into input_features_df) ...
+
+    try:
+        assessment_result, prevention_plan = assess_risk_and_plan(input_features_df)
+        # Store results in session state to persist them
+        st.session_state.assessment_result = assessment_result
+        st.session_state.prevention_plan = prevention_plan
+        st.session_state.show_results = True # Flag to show results area
+        # Clear previous chat state when new assessment is run
+        if "chat_session" in st.session_state:
+            del st.session_state.chat_session
+        if "messages" in st.session_state:
+            del st.session_state.messages
+
+    except FileNotFoundError as e:
+        st.error(f"Error loading model artifacts: {e}. Please ensure training script has been run.")
+        st.session_state.show_results = False
+    except KeyError as e:
+        st.error(f"Error accessing expected data: {e}. Check input data or metadata file.")
+        st.session_state.show_results = False
+    except Exception as e:
+        st.error(f"An unexpected error occurred during assessment: {e}")
+        st.session_state.show_results = False
+
+# --- Display Assessment Results and Chatbot (Only if button was clicked and results exist) ---
+# Use session state to control visibility
+if st.session_state.get('show_results', False):
+    assessment_result = st.session_state.get('assessment_result')
+    prevention_plan = st.session_state.get('prevention_plan')
+
+    if assessment_result and prevention_plan:
+        st.subheader("Risk Assessment Result")
+        risk_score = assessment_result.get('risk_score', 'N/A')
+        risk_cat = assessment_result.get('risk_category', 'N/A')
+        st.metric(label="Predicted Risk Score", value=f"{risk_score:.3f}",
+                  help="Score ranges from 0 (low risk) to 1 (high risk)")
+        st.markdown(f"**Risk Category:** {risk_cat}")
+        st.markdown(assessment_result.get('explanation', ''))
+
+        st.subheader("Personalized Prevention Plan Suggestion")
+        # ... (Your existing display logic for key factors, recommendations, timeline, monitoring) ...
+        # Example for displaying factors:
+        st.markdown("**Key Lifestyle Factors for Improvement:**")
+        factors = prevention_plan.get('key_lifestyle_factors_for_improvement', [])
+        if factors:
+             st.markdown(f"`{', '.join(factors)}`")
+        else:
+             st.markdown("_None identified based on input._")
+        # (Add similar display for other plan parts)
+
+
+        # --- Add Separator ---
+        st.divider()
+
+        # --- AI Chatbot Section (Now conditionally displayed) ---
+        st.subheader("AI Chatbot") # Keep subheader outside expander
+
+        if not GEMINI_AVAILABLE:
+            st.info("💡 AI Chatbot requires setup: Add your GOOGLE_API_KEY to Streamlit Secrets to enable it.")
+        else:
+            # Use an expander for the chatbot
+            with st.expander("🤖 Ask the AI Chatbot a Question (Beta)"):
+                st.markdown("Ask general questions about breast cancer using the context of the plan above. **Note:** Informational responses only, not medical advice.")
+
+                # --- Initialize Chat with Context ---
+                # Construct system prompt context based on current results
+                risk_cat_ctx = assessment_result.get('risk_category', 'N/A')
+                risk_scr_ctx = assessment_result.get('risk_score', 'N/A')
+                plan_factors_ctx = prevention_plan.get('key_lifestyle_factors_for_improvement', [])
+                plan_recs_ctx = prevention_plan.get('personalized_recommendations', [])
+                plan_timeline_ctx = prevention_plan.get('suggested_timeline', [])
+                plan_monitor_ctx = prevention_plan.get('monitoring_suggestions', [])
+
+                system_context = f"""
+Here is the latest assessment for the user you are chatting with:
+- Risk Category: {risk_cat_ctx}
+- Risk Score: {risk_scr_ctx:.3f}
+- Key Lifestyle Factors Identified for Improvement: {', '.join(plan_factors_ctx) if plan_factors_ctx else 'None'}
+- Personalized Recommendations Provided: {'; '.join(plan_recs_ctx) if plan_recs_ctx else 'None'}
+- Suggested Timeline: {' '.join(plan_timeline_ctx) if plan_timeline_ctx else 'None'}
+- Monitoring Suggestions: {' '.join(plan_monitor_ctx) if plan_monitor_ctx else 'None'}
+
+You are a helpful assistant knowledgeable about breast cancer. Use the provided assessment context when relevant to the user's questions. Provide informative and general answers. Do not give medical advice. Keep responses concise.
+"""
+                initial_history = [
+                    {'role': 'user', 'parts': [system_context]},
+                    {'role': 'model', 'parts': ["Okay, I understand the user's latest assessment results and plan. I will use this context when relevant and provide general information about breast cancer, avoiding medical advice and keeping responses concise."]}
+                ]
+
+                # Initialize chat session and messages in state *if not already done for this assessment*
+                # Note: Clicking the button again will reset this based on the clearing logic above
+                if "chat_session" not in st.session_state:
+                    st.session_state.chat_session = gemini_model.start_chat(history=initial_history)
+                if "messages" not in st.session_state:
+                    st.session_state.messages = initial_history # Start display history with context
+
+                # --- Display Chat History ---
+                # Skip displaying the initial system prompt/ack in the chat window for cleaner UI
+                for message in st.session_state.messages:
+                    if message['role'] == 'user' and message['parts'][0].startswith("Here is the latest assessment"):
+                        continue # Don't show the long system context prompt
+                    if message['role'] == 'model' and message['parts'][0].startswith("Okay, I understand"):
+                         continue # Don't show the initial model acknowledgement
+                    with st.chat_message(message["role"]):
+                         st.markdown(message["parts"][0]) # Access parts correctly
+
+                # --- Handle Chat Input ---
+                if prompt := st.chat_input("Ask about the plan or breast cancer..."):
+                    # Add user message to session state messages for display
+                    st.session_state.messages.append({"role": "user", "parts": [prompt]})
+                    with st.chat_message("user"):
+                        st.markdown(prompt)
+
+                    # Generate and display AI response
+                    with st.chat_message("assistant"):
+                        message_placeholder = st.empty()
+                        full_response = ""
+                        try:
+                            with st.spinner("Thinking..."):
+                                # Send message to the existing chat session
+                                response = st.session_state.chat_session.send_message(prompt)
+                                full_response = response.text
+                                message_placeholder.markdown(full_response)
+                                # Add AI response to session state messages for display
+                                st.session_state.messages.append({"role": "assistant", "parts": [full_response]}) # Store parts correctly
+                        except Exception as e:
+                            full_response = f"Sorry, an error occurred: {e}"
+                            message_placeholder.error(full_response)
+                            # Optionally add error message to history
+                            # st.session_state.messages.append({"role": "assistant", "parts": [full_response]})
+
+    else:
+         # Handle case where button clicked but results failed to generate (covered by exceptions)
+         st.warning("Could not display results or chatbot due to errors during assessment.")
+
+# --- SHAP Plot Display (Placed outside the main conditional block, in the sidebar) ---
+st.sidebar.markdown("---") # Add a separator in the sidebar
+st.sidebar.subheader("Model Interpretability") # Add a subheader in the sidebar
+shap_image_path = "shap_summary_plot.png"
+if os.path.exists(shap_image_path):
+    # Use a button in the sidebar to trigger the display
+    # Ensure a unique key for the button
+    if st.sidebar.button("SHOW FEATURE IMPORTANCE PLOT (SHAP)", key="shap_button"):
+        st.subheader("SHAP Feature Importance Summary") # Display title in the main area
+        st.image(
+            shap_image_path,
+            caption="SHAP summary plot from model training",
+            use_container_width=True # UPDATED PARAMETER
+        ) # Display image in the main area
+else:
+    # Inform the user if the plot file is missing
+    st.sidebar.caption("SHAP plot image not found. Run training script or ensure file is deployed.")

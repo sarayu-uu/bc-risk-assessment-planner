@@ -170,7 +170,31 @@ after generating a plan for general questions about breast cancer.
 # --- Sidebar Inputs ---
 with st.sidebar:
     st.header("Input Patient Data")
-    # ... (Your existing sliders and expander for medical/lifestyle inputs) ...
+    
+    # Medical data inputs (simplified with defaults from the example data)
+    with st.expander("Medical Data"):
+        # Using the same medical features as in the example
+        medical_data = {}
+        for feature in original_feature_names:
+            default_value = client_medical_data.get(feature, 0.0)  # Get default from example data
+            medical_data[feature] = st.number_input(f"{feature}", value=float(default_value), step=0.01)
+    
+    # Lifestyle data inputs
+    with st.expander("Lifestyle Data", expanded=True):
+        lifestyle_data = {}
+        lifestyle_data['physical_activity'] = st.slider("Physical Activity", 0.0, 1.0, 0.3, 0.01, 
+                                                       help="Higher is better")
+        lifestyle_data['diet_quality'] = st.slider("Diet Quality", 0.0, 1.0, 0.4, 0.01,
+                                                  help="Higher is better")
+        lifestyle_data['stress_level'] = st.slider("Stress Level", 0.0, 1.0, 0.8, 0.01,
+                                                  help="Lower is better")
+        lifestyle_data['sleep_quality'] = st.slider("Sleep Quality", 0.0, 1.0, 0.5, 0.01,
+                                                   help="Higher is better")
+        lifestyle_data['alcohol_consumption'] = st.slider("Alcohol Consumption", 0.0, 1.0, 0.7, 0.01,
+                                                         help="Lower is better")
+        lifestyle_data['smoking_history'] = st.slider("Smoking History", 0.0, 1.0, 0.1, 0.01,
+                                                     help="Lower is better")
+    
     assess_button = st.button("Assess Risk and Generate Plan", key="assess_button")
 
 # --- Main Area ---
@@ -180,10 +204,23 @@ prevention_plan = None
 
 if assess_button:
     # Prepare input_df from sidebar state
-    # ... (Your existing logic to collect inputs into client_lifestyle_data, client_medical_data) ...
-    # ... (Your existing logic to calculate interaction features) ...
-    # ... (Your existing logic to combine data into input_features_df) ...
-
+    # Combine medical and lifestyle data
+    input_data_all_features = {}
+    input_data_all_features.update(medical_data)
+    input_data_all_features.update(lifestyle_data)
+    
+    # Calculate interaction features
+    try:
+        input_data_all_features['activity_immune_interaction'] = input_data_all_features['physical_activity'] * input_data_all_features['worst concave points']
+        input_data_all_features['diet_cell_interaction'] = input_data_all_features['diet_quality'] * input_data_all_features['mean texture']
+        input_data_all_features['stress_immune_interaction'] = (1 - input_data_all_features['stress_level']) * input_data_all_features['mean smoothness']
+    except KeyError as e:
+        st.error(f"Error calculating interaction features. Missing base feature: {e}. Cannot proceed.")
+        st.stop()
+    
+    # Create the DataFrame
+    input_features_df = pd.DataFrame([input_data_all_features])
+    
     try:
         assessment_result, prevention_plan = assess_risk_and_plan(input_features_df)
         # Store results in session state to persist them

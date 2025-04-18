@@ -123,6 +123,8 @@ class PreventionPlanGenerator:
         self.lifestyle_feature_names = LIFESTYLE_FEATURES_NAMES
 
     def generate_plan(self, input_features_df, risk_score):
+        # FIXED: Risk score now correctly represents probability of malignancy (class 0)
+        # Higher risk score = higher cancer risk
         plan = {
             'risk_score': round(risk_score, 3),
             'risk_category': 'High' if risk_score >= 0.7 else 'Medium' if risk_score >= 0.3 else 'Low',
@@ -335,11 +337,11 @@ def assess_risk_and_plan(input_features_df):
         
         print(f"Input features preprocessed: scaled {features_scaled.shape[1]} features, selected {features_selected.shape[1]} features")
     except NotFittedError as e:
-         print(f"Error during transform (scaler or selector not fitted?): {e}")
-         return None, None
+        print(f"Error during transform (scaler or selector not fitted?): {e}")
+        return None, None
     except ValueError as e:
-         print(f"Error during transform (likely feature mismatch): {e}")
-         return None, None
+        print(f"Error during transform (likely feature mismatch): {e}")
+        return None, None
     except Exception as e:
         print(f"Error during preprocessing: {e}")
         return None, None
@@ -348,7 +350,10 @@ def assess_risk_and_plan(input_features_df):
     # Get prediction probability (risk score)
     try:
         # Use selected features for prediction
-        risk_score = model.predict_proba(features_selected)[:, 1][0]
+        # FIXED: Get probability of class 0 (malignant) as the risk score
+        # In scikit-learn breast cancer dataset: 0=malignant, 1=benign
+        # Higher risk score should mean higher risk of cancer (malignant)
+        risk_score = model.predict_proba(features_selected)[:, 0][0]
         print(f"Calculated risk score: {risk_score:.3f}")
     except Exception as e:
         print(f"Error during prediction: {e}")

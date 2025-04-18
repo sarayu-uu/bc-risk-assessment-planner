@@ -172,8 +172,11 @@ for name, model in models.items():
     trained_models[name] = model
 
     # Predict probabilities on test set
+    # NOTE: For model evaluation, we still use class 1 (benign) probability
+    # because scikit-learn's roc_auc_score expects probabilities of the positive class (1)
+    # This is different from our risk assessment where we want risk_score to be probability of cancer
     if hasattr(model, "predict_proba"):
-         y_prob = model.predict_proba(X_test_selected)[:, 1]
+         y_prob = model.predict_proba(X_test_selected)[:, 1]  # Class 1 (benign) for evaluation
     else:
          y_decision = model.decision_function(X_test_selected)
          y_prob = (y_decision - y_decision.min()) / (y_decision.max() - y_decision.min())
@@ -210,8 +213,9 @@ joblib.dump(selector, SELECTOR_FILENAME)
 model_metadata = {
     'model_name': 'Breast Cancer Risk Assessment with Lifestyle Factors',
     'best_model_type': best_model_name,
-    'version': '1.2', # Incremented version
+    'version': '1.3', # Incremented version after fixing risk score interpretation
     'creation_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+    'risk_score_interpretation': 'Risk score represents probability of malignancy (class 0). Higher score = higher cancer risk.',
     'hyperparameter_tuning_details (GB)': {
         'method': 'RandomizedSearchCV',
         'params_searched': str(param_dist_gb), # Convert dists to string

@@ -255,12 +255,17 @@ if isinstance(best_model, (RandomForestClassifier, GradientBoostingClassifier)):
         shap_values = explainer.shap_values(X_test_selected_df)
         shap_values_to_plot = shap_values[1] if isinstance(shap_values, list) and len(shap_values) == 2 else shap_values
 
-        plt.figure()
+        # Create two SHAP summary plots - one for all features and one for lifestyle features
+        # 1. Plot for all features
+        plt.figure(figsize=(10, 8))
         shap.summary_plot(shap_values_to_plot, X_test_selected_df, show=False)
-        plt.title(f'SHAP Summary Plot for {best_model_name}')
+        plt.title(f'SHAP Summary Plot for {best_model_name} - All Features')
         plt.tight_layout()
         plt.savefig(SHAP_SUMMARY_PLOT_FILENAME)
         plt.close()
+        
+        # We're not creating a separate SHAP plot for lifestyle parameters as requested
+        
         print(f"SHAP summary plot saved as {SHAP_SUMMARY_PLOT_FILENAME}")
     except Exception as e:
         print(f"Error during SHAP analysis: {e}")

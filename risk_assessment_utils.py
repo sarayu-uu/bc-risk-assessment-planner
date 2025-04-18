@@ -297,16 +297,18 @@ def assess_risk_and_plan(input_features_df):
         print(f"Error loading model components: {e}")
         return None, None
 
-    # Load metadata to get expected feature order for scaler
+    # Load metadata to get expected feature order for scaler and selected features
     try:
         with open(METADATA_FILENAME, 'r') as f:
             metadata = json.load(f)
         expected_features = metadata['all_features']
+        selected_features = metadata['selected_features']
+        print(f"Loaded metadata with {len(expected_features)} total features and {len(selected_features)} selected features")
     except FileNotFoundError:
         print(f"Error: Metadata file '{METADATA_FILENAME}' not found.")
         return None, None
-    except KeyError:
-        print(f"Error: Metadata file '{METADATA_FILENAME}' is missing 'all_features' key.")
+    except KeyError as e:
+        print(f"Error: Metadata file '{METADATA_FILENAME}' is missing required key: {e}")
         return None, None
     except Exception as e:
         print(f"Error reading metadata file: {e}")
@@ -323,11 +325,15 @@ def assess_risk_and_plan(input_features_df):
         print(f"Error ordering input features: {e}")
         return None, None
 
-    # Preprocess features: Scale -> Select
+    # Preprocess features: Scale and then apply feature selection
     try:
+        # First scale the features
         features_scaled = scaler.transform(input_features_df_ordered)
+        
+        # Apply feature selection using the selector
         features_selected = selector.transform(features_scaled)
-        print("Input features preprocessed.")
+        
+        print(f"Input features preprocessed: scaled {features_scaled.shape[1]} features, selected {features_selected.shape[1]} features")
     except NotFittedError as e:
          print(f"Error during transform (scaler or selector not fitted?): {e}")
          return None, None
@@ -341,6 +347,7 @@ def assess_risk_and_plan(input_features_df):
 
     # Get prediction probability (risk score)
     try:
+        # Use selected features for prediction
         risk_score = model.predict_proba(features_selected)[:, 1][0]
         print(f"Calculated risk score: {risk_score:.3f}")
     except Exception as e:
@@ -358,7 +365,7 @@ def assess_risk_and_plan(input_features_df):
         assessment_result = {
             'risk_score': round(risk_score, 3),
             'risk_category': 'Unknown',
-            'explanation': f"Risk score based on analysis of {features_selected.shape[1]} selected features. Plan generation failed."
+            'explanation': f"Risk score based on analysis of {features_scaled.shape[1]} features. Plan generation failed."
         }
         return assessment_result, None
 
@@ -366,7 +373,7 @@ def assess_risk_and_plan(input_features_df):
     assessment_result = {
         'risk_score': round(risk_score, 3),
         'risk_category': prevention_plan['risk_category'], # Get category from plan
-        'explanation': f"Risk score based on analysis of {features_selected.shape[1]} selected features."
+        'explanation': f"Risk score based on analysis of {features_scaled.shape[1]} features."
     }
 
     return assessment_result, prevention_plan 

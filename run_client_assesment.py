@@ -325,8 +325,8 @@ if os.path.exists(shap_image_path):
     # Use a button in the sidebar to trigger the display
     # Ensure a unique key for the button
     if st.sidebar.button("SHOW FEATURE IMPORTANCE PLOT (SHAP)", key="shap_button"):
-        st.subheader("SHAP Feature Importance Summary") # Display title in the main area
-        st.image(
+      st.subheader("SHAP Feature Importance Summary") # Display title in the main area
+      st.image(
             shap_image_path,
             caption="SHAP summary plot from model training",
             use_container_width=True # UPDATED PARAMETER

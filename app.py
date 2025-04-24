@@ -7,10 +7,14 @@ import random # Ensure random is imported
 
 # Import the assessment function and constants from our utility files
 from risk_assessment_utils import (
-    assess_risk_and_plan, 
+    assess_risk_and_plan,
+    generate_individual_shap_plot,
     METADATA_FILENAME, 
     LIFESTYLE_FEATURES_NAMES,
-    # INTERACTION_FEATURES_NAMES, # Not used directly in app.py it seems
+    INTERACTION_FEATURES_NAMES,
+    SHAP_SUMMARY_PLOT_FILENAME,
+    LIFESTYLE_SHAP_PLOT_FILENAME,
+    MEDICAL_SHAP_PLOT_FILENAME,
     GEMINI_AVAILABLE,
     gemini_model
 )
@@ -101,9 +105,41 @@ if assess_button:
     try:
         # Example calculations - adjust based on your actual definitions in training/utils
         # Ensure the base features used here exist in combined_input_data
-        INTERACTION_FEATURES_DICT['activity_immune_interaction'] = combined_input_data['physical_activity'] * combined_input_data['worst concave points']
-        INTERACTION_FEATURES_DICT['diet_cell_interaction'] = combined_input_data['diet_quality'] * combined_input_data['mean texture']
-        INTERACTION_FEATURES_DICT['stress_immune_interaction'] = (1 - combined_input_data['stress_level']) * combined_input_data['mean smoothness']
+        if 'alcohol_immune_interaction' in interaction_feature_names_expected:
+            INTERACTION_FEATURES_DICT['alcohol_immune_interaction'] = combined_input_data['alcohol_consumption'] * combined_input_data['worst concave points']
+        
+        if 'bmi_hormone_interaction' in interaction_feature_names_expected:
+            INTERACTION_FEATURES_DICT['bmi_hormone_interaction'] = combined_input_data['body_weight_bmi'] * combined_input_data['mean perimeter']
+        
+        if 'inactivity_immune_interaction' in interaction_feature_names_expected:
+            INTERACTION_FEATURES_DICT['inactivity_immune_interaction'] = combined_input_data['physical_inactivity_level'] * combined_input_data['worst concave points']
+        
+        if 'poor_diet_cell_interaction' in interaction_feature_names_expected:
+            INTERACTION_FEATURES_DICT['poor_diet_cell_interaction'] = combined_input_data['poor_diet_quality'] * combined_input_data['mean texture']
+        
+        if 'smoking_dna_interaction' in interaction_feature_names_expected:
+            INTERACTION_FEATURES_DICT['smoking_dna_interaction'] = combined_input_data['smoking_history'] * combined_input_data['worst radius']
+        
+        if 'hormone_cell_proliferation_interaction' in interaction_feature_names_expected:
+            INTERACTION_FEATURES_DICT['hormone_cell_proliferation_interaction'] = combined_input_data['hormone_use'] * combined_input_data['mean area']
+        
+        if 'genetic_cell_interaction' in interaction_feature_names_expected:
+            INTERACTION_FEATURES_DICT['genetic_cell_interaction'] = combined_input_data['family_history_genetic'] * combined_input_data['worst perimeter']
+        
+        if 'menstrual_hormone_interaction' in interaction_feature_names_expected:
+            INTERACTION_FEATURES_DICT['menstrual_hormone_interaction'] = combined_input_data['menstrual_history'] * combined_input_data['mean concavity']
+        
+        if 'reproductive_cell_interaction' in interaction_feature_names_expected:
+            INTERACTION_FEATURES_DICT['reproductive_cell_interaction'] = combined_input_data['reproductive_history'] * combined_input_data['mean radius']
+        
+        if 'environmental_cell_interaction' in interaction_feature_names_expected:
+            INTERACTION_FEATURES_DICT['environmental_cell_interaction'] = combined_input_data['environmental_exposures'] * combined_input_data['mean smoothness']
+        
+        # Add any missing interaction features with default values (0.0)
+        for feature in interaction_feature_names_expected:
+            if feature not in INTERACTION_FEATURES_DICT:
+                print(f"Warning: Adding missing interaction feature with default value: {feature}")
+                INTERACTION_FEATURES_DICT[feature] = 0.0
         
         # Verify all expected interaction features were calculated
         if set(INTERACTION_FEATURES_DICT.keys()) != set(interaction_feature_names_expected):
@@ -128,6 +164,9 @@ if assess_button:
             # Reorder columns to match the exact order expected by the pipeline
             input_features_df = input_features_df[EXPECTED_FEATURES]
             print(f"Input DataFrame created with columns: {input_features_df.columns.tolist()}") # Debug print
+            
+            # Store the input features in session state for SHAP plot generation
+            st.session_state.input_features_df = input_features_df
 
         except KeyError as e:
             st.error(f"Mismatch creating DataFrame: Missing expected feature {e}. Check metadata or calculation logic.")
@@ -195,6 +234,53 @@ if st.session_state.get('show_results', False):
              st.metric(label="Predicted Risk Score", value="N/A")
         st.markdown(f"**Risk Category:** {risk_cat}")
         st.markdown(assessment_result.get('explanation', ''))
+        
+        # --- Personalized Lifestyle Risk Analysis ---
+        st.subheader("Your Lifestyle Risk Factors")
+        
+        # Get the input features from session state
+        input_features_df = st.session_state.get('input_features_df')
+        
+        if input_features_df is not None:
+            # Generate personalized lifestyle risk factor analysis
+            with st.spinner("Generating your personalized lifestyle risk factor analysis..."):
+                risk_img, top_factors = generate_individual_shap_plot(input_features_df, top_n=7)
+                
+                if risk_img and top_factors:
+                    # Display the visualization
+                    st.markdown("This chart shows how your lifestyle choices are influencing your risk assessment:")
+                    st.image(f"data:image/png;base64,{risk_img}", use_container_width=True)
+                    
+                    # Display the top factors in a more readable format
+                    st.markdown("### Your Key Lifestyle Risk Factors Explained")
+                    
+                    # Create two columns
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.markdown("#### Factors Increasing Your Risk")
+                        increasing_factors = [f for f in top_factors if f['impact'] == 'Increases']
+                        if increasing_factors:
+                            for factor in increasing_factors:
+                                feature_name = factor['feature'].replace('_', ' ').title()
+                                st.markdown(f"**{feature_name}**: {factor['value']}")
+                        else:
+                            st.markdown("*No significant lifestyle factors increasing your risk were identified.*")
+                    
+                    with col2:
+                        st.markdown("#### Factors Decreasing Your Risk")
+                        decreasing_factors = [f for f in top_factors if f['impact'] == 'Decreases']
+                        if decreasing_factors:
+                            for factor in decreasing_factors:
+                                feature_name = factor['feature'].replace('_', ' ').title()
+                                st.markdown(f"**{feature_name}**: {factor['value']}")
+                        else:
+                            st.markdown("*No significant lifestyle factors decreasing your risk were identified.*")
+                    
+                    # Add explanation about the visualization that connects to the prevention plan
+                    st.info("This analysis highlights the lifestyle factors that have the greatest impact on your risk. The personalized prevention plan below provides specific recommendations for how to modify these factors to reduce your overall risk.")
+                else:
+                    st.info("Could not generate personalized lifestyle risk factor analysis. Please ensure all lifestyle factors are properly entered.")
 
         # --- Display Prevention Plan --- 
         st.subheader("Personalized Prevention Plan Suggestion")
@@ -352,20 +438,35 @@ You are a helpful assistant knowledgeable about breast cancer. Use the provided 
             st.warning("Could not display results or chatbot due to errors during assessment.")
             print("Results/Plan object missing, skipping display.") # Debug print
 
-# --- SHAP Plot Display (Placed outside the main conditional block, in the sidebar) ---
+# --- SHAP Plot Display (Hybrid Approach) ---
 st.sidebar.markdown("---") # Add a separator in the sidebar
 st.sidebar.subheader("Model Interpretability") # Add a subheader in the sidebar
-shap_image_path = "shap_summary_plot.png"
-if os.path.exists(shap_image_path):
-    # Use a button in the sidebar to trigger the display
-    # Ensure a unique key for the button
-    if st.sidebar.button("Show Feature importance Plot (SHAP)", key="shap_button"):
-        st.subheader("SHAP Feature Importance Summary") # Display title in the main area
+
+# Population-level SHAP plots
+st.sidebar.markdown("### Population-Level Feature Importance")
+
+# Medical Features SHAP Plot
+shap_medical_path = "shap_medical_features_plot.png"
+if os.path.exists(shap_medical_path):
+    if st.sidebar.button("Show Medical Features Importance", key="shap_medical_button"):
+        st.subheader("Population-Level SHAP Summary - Medical Features Only")
         st.image(
-            shap_image_path, 
-            caption="SHAP summary plot from model training", 
+            shap_medical_path, 
+            caption="This plot shows the importance of medical features across the entire population.", 
             use_container_width=True
-        ) # Display image in the main area
+        )
 else:
-    # Inform the user if the plot file is missing
-    st.sidebar.caption("SHAP plot image not found. Run training script or ensure file is deployed.")
+    st.sidebar.caption("Medical features SHAP plot not found.")
+
+# Lifestyle Features SHAP Plot
+shap_lifestyle_path = "shap_lifestyle_features_plot.png"
+if os.path.exists(shap_lifestyle_path):
+    if st.sidebar.button("Show Lifestyle Features Importance", key="shap_lifestyle_button"):
+        st.subheader("Population-Level SHAP Summary - Lifestyle & Interaction Features")
+        st.image(
+            shap_lifestyle_path, 
+            caption="This plot shows the importance of lifestyle and interaction features across the entire population.", 
+            use_container_width=True
+        )
+else:
+    st.sidebar.caption("Lifestyle features SHAP plot not found.")

@@ -1,9 +1,15 @@
 {
-    "model_name": "Breast Cancer Risk Assessment with Evidence-Based Risk Factors",
+    "model_name": "Breast Cancer Risk Assessment with NHANES-Based Risk Factors",
     "best_model_type": "Tuned Gradient Boosting",
-    "version": "2.0",
-    "creation_date": "2025-04-20 10:01:38",
+    "version": "3.0",
+    "creation_date": "2025-04-22 21:20:36",
     "risk_score_interpretation": "Risk score represents probability of malignancy (class 0). Higher score = higher cancer risk.",
+    "data_sources": {
+        "tumor_characteristics": "Wisconsin Breast Cancer Dataset (UCI)",
+        "lifestyle_factors": "NHANES (National Health and Nutrition Examination Survey)",
+        "nhanes_cycle": "2017-2018",
+        "integration_method": "Artificial mapping of NHANES lifestyle data to breast cancer outcomes"
+    },
     "risk_factors": {
         "alcohol_consumption": "Risk increases with amount consumed; even light drinking (1 drink/day) can increase risk by 7-10%",
         "body_weight_bmi": "Being overweight or obese, especially after menopause, increases risk as excess body fat increases estrogen production",
@@ -11,20 +17,33 @@
         "poor_diet_quality": "Low intake of fruits, vegetables, and fiber, and high consumption of processed foods increases risk",
         "reproductive_history": "Late first pregnancy (after 30), fewer children, and shorter/no breastfeeding increases risk",
         "hormone_use": "Hormone replacement therapy (especially combined estrogen-progestin) and certain oral contraceptives increase risk",
-        "family_history_genetic": "First-degree relatives with breast cancer and known genetic mutations (BRCA1, BRCA2) increase risk",
-        "smoking_history": "Current or past tobacco use increases risk, with duration and intensity as important factors",
-        "environmental_exposures": "Radiation exposure (especially to chest area before age 30) and certain chemicals increase risk",
-        "menstrual_history": "Early menarche (before age 12) and late menopause (after 55) increase risk due to longer estrogen exposure"
+        "smoking_history": "Current or past tobacco use increases risk, with duration and intensity as important factors"
+    },
+    "nhanes_variables_used": {
+        "ALQ130": "Days per year had alcoholic beverages",
+        "ALQ120Q": "Usual number of drinks on drinking days",
+        "BMXBMI": "Body Mass Index (kg/m\u00b2)",
+        "PAQ650": "Minutes of moderate physical activity per week",
+        "PAQ665": "Minutes of vigorous physical activity per week",
+        "DBQ700": "How often eat fruit",
+        "DBQ710": "How often eat vegetables",
+        "DBQ720": "How often eat dark green vegetables",
+        "SMQ020": "Smoked at least 100 cigarettes in life",
+        "SMQ040": "Do you now smoke cigarettes",
+        "RHQ131": "Age when first child was born",
+        "RHQ160": "Ever breastfed children",
+        "RHQ420": "Ever taken birth control pills",
+        "RHQ540": "Ever taken hormone replacement therapy"
     },
     "hyperparameter_tuning_details (GB)": {
         "method": "RandomizedSearchCV",
-        "params_searched": "{'n_estimators': <scipy.stats._distn_infrastructure.rv_discrete_frozen object at 0x0000024E70AF9A90>, 'learning_rate': [0.01, 0.05, 0.1, 0.2], 'max_depth': <scipy.stats._distn_infrastructure.rv_discrete_frozen object at 0x0000024E70AEE5D0>}",
+        "params_searched": "{'n_estimators': <scipy.stats._distn_infrastructure.rv_discrete_frozen object at 0x000001EEA1BDE3C0>, 'learning_rate': [0.01, 0.05, 0.1, 0.2], 'max_depth': <scipy.stats._distn_infrastructure.rv_discrete_frozen object at 0x000001EEA1BCEE90>}",
         "best_params": {
-            "learning_rate": 0.2,
-            "max_depth": 3,
-            "n_estimators": 260
+            "learning_rate": 0.1,
+            "max_depth": 4,
+            "n_estimators": 152
         },
-        "best_cv_score": 0.9901753738948145
+        "best_cv_score": 0.98866604553057
     },
     "all_features": [
         "mean radius",
@@ -63,8 +82,8 @@
         "poor_diet_quality",
         "reproductive_history",
         "hormone_use",
-        "family_history_genetic",
         "smoking_history",
+        "family_history_genetic",
         "environmental_exposures",
         "menstrual_history",
         "alcohol_immune_interaction",
@@ -83,7 +102,6 @@
         "mean texture",
         "mean perimeter",
         "mean area",
-        "mean smoothness",
         "mean compactness",
         "mean concavity",
         "mean concave points",
@@ -91,6 +109,7 @@
         "perimeter error",
         "area error",
         "concavity error",
+        "concave points error",
         "worst radius",
         "worst texture",
         "worst perimeter",
@@ -106,8 +125,8 @@
     ],
     "model_performance_summary": {
         "accuracy": 0.956,
-        "test_roc_auc": 0.995,
-        "cv_roc_auc_mean (from tuning if applicable)": 0.99,
+        "test_roc_auc": 0.994,
+        "cv_roc_auc_mean (from tuning if applicable)": 0.989,
         "classification_report": {
             "0": {
                 "precision": 0.9523809523809523,
@@ -139,7 +158,7 @@
     "full_evaluation_results": {
         "Logistic Regression": {
             "accuracy": 0.982,
-            "test_roc_auc": 0.997,
+            "test_roc_auc": 0.996,
             "cv_roc_auc_mean (from tuning if applicable)": "N/A (Not Tuned)",
             "classification_report": {
                 "0": {
@@ -171,7 +190,7 @@
         },
         "Random Forest": {
             "accuracy": 0.965,
-            "test_roc_auc": 0.996,
+            "test_roc_auc": 0.995,
             "cv_roc_auc_mean (from tuning if applicable)": "N/A (Not Tuned)",
             "classification_report": {
                 "0": {
@@ -203,8 +222,8 @@
         },
         "Tuned Gradient Boosting": {
             "accuracy": 0.956,
-            "test_roc_auc": 0.995,
-            "cv_roc_auc_mean (from tuning if applicable)": 0.99,
+            "test_roc_auc": 0.994,
+            "cv_roc_auc_mean (from tuning if applicable)": 0.989,
             "classification_report": {
                 "0": {
                     "precision": 0.9523809523809523,
@@ -232,6 +251,23 @@
                     "support": 114.0
                 }
             }
+        }
+    },
+    "separate_models_performance": {
+        "tumor_model": {
+            "accuracy": 0.956,
+            "roc_auc": 0.995,
+            "features_used": 30
+        },
+        "lifestyle_model": {
+            "accuracy": 0.518,
+            "roc_auc": 0.412,
+            "features_used": 10
+        },
+        "interaction_model": {
+            "accuracy": 0.921,
+            "roc_auc": 0.938,
+            "features_used": 8
         }
     },
     "scaler_details": {

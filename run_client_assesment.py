@@ -5,7 +5,7 @@ import json
 import random
 import warnings
 import os
-import genai
+import google.generativeai as genai
 import streamlit as st
 
 # Import the necessary function and constants from the utility file
@@ -78,12 +78,16 @@ if len(client_medical_data) != len(original_feature_names):
 #       Scale: 0-1 (higher generally means more/better, except for stress, alcohol, smoking)
 print("Simulating client lifestyle data (Replace with actual values)...")
 client_lifestyle_data = {
-    'physical_activity': 0.3,  # Low activity
-    'diet_quality': 0.4,       # Mediocre diet
-    'stress_level': 0.8,       # High stress
-    'sleep_quality': 0.5,      # Okay sleep
-    'alcohol_consumption': 0.7,# High consumption
-    'smoking_history': 0.1     # Smoked a little in past, low current risk factor score
+    'alcohol_consumption': 0.7,       # High consumption (bad)
+    'body_weight_bmi': 0.6,           # Higher BMI (bad)
+    'physical_inactivity_level': 0.7,   # High inactivity (bad)
+    'poor_diet_quality': 0.6,              # Poor diet (bad)
+    'reproductive_history': 0.5,      # Moderate risk factors
+    'hormone_use': 0.6,               # Moderate hormone use (bad)
+    'family_history_genetic': 0.4,    # Some family history (bad)
+    'smoking_history': 0.3,           # Some smoking history (bad)
+    'environmental_exposures': 0.5,   # Moderate exposures (bad)
+    'menstrual_history': 0.6          # Longer estrogen exposure (bad)
 }
 
 # 2. Prepare Input DataFrame for the Model
@@ -94,9 +98,16 @@ client_data_all_features.update(client_lifestyle_data)
 
 # Calculate Interaction Features
 try:
-    client_data_all_features['activity_immune_interaction'] = client_data_all_features['physical_activity'] * client_data_all_features['worst concave points']
-    client_data_all_features['diet_cell_interaction'] = client_data_all_features['diet_quality'] * client_data_all_features['mean texture']
-    client_data_all_features['stress_immune_interaction'] = (1 - client_data_all_features['stress_level']) * client_data_all_features['mean smoothness']
+    client_data_all_features['alcohol_immune_interaction'] = client_data_all_features['alcohol_consumption'] * client_data_all_features['worst concave points']
+    client_data_all_features['bmi_hormone_interaction'] = client_data_all_features['body_weight_bmi'] * client_data_all_features['mean perimeter']
+    client_data_all_features['inactivity_immune_interaction'] = client_data_all_features['physical_inactivity_level'] * client_data_all_features['worst concave points']
+    client_data_all_features['poor_diet_cell_interaction'] = client_data_all_features['poor_diet_quality'] * client_data_all_features['mean texture']
+    client_data_all_features['smoking_dna_interaction'] = client_data_all_features['smoking_history'] * client_data_all_features['worst radius']
+    client_data_all_features['hormone_cell_proliferation_interaction'] = client_data_all_features['hormone_use'] * client_data_all_features['mean area']
+    client_data_all_features['genetic_cell_interaction'] = client_data_all_features['family_history_genetic'] * client_data_all_features['worst perimeter']
+    client_data_all_features['menstrual_hormone_interaction'] = client_data_all_features['menstrual_history'] * client_data_all_features['mean concavity']
+    client_data_all_features['reproductive_cell_interaction'] = client_data_all_features['reproductive_history'] * client_data_all_features['mean radius']
+    client_data_all_features['environmental_cell_interaction'] = client_data_all_features['environmental_exposures'] * client_data_all_features['mean smoothness']
 except KeyError as e:
     print(f"Error calculating interaction features. Missing base feature: {e}. Cannot proceed.")
     exit()
@@ -182,18 +193,26 @@ with st.sidebar:
     # Lifestyle data inputs
     with st.expander("Lifestyle Data", expanded=True):
         lifestyle_data = {}
-        lifestyle_data['physical_activity'] = st.slider("Physical Activity", 0.0, 1.0, 0.3, 0.01, 
-                                                       help="Higher is better")
-        lifestyle_data['diet_quality'] = st.slider("Diet Quality", 0.0, 1.0, 0.4, 0.01,
-                                                  help="Higher is better")
-        lifestyle_data['stress_level'] = st.slider("Stress Level", 0.0, 1.0, 0.8, 0.01,
-                                                  help="Lower is better")
-        lifestyle_data['sleep_quality'] = st.slider("Sleep Quality", 0.0, 1.0, 0.5, 0.01,
-                                                   help="Higher is better")
         lifestyle_data['alcohol_consumption'] = st.slider("Alcohol Consumption", 0.0, 1.0, 0.7, 0.01,
-                                                         help="Lower is better")
-        lifestyle_data['smoking_history'] = st.slider("Smoking History", 0.0, 1.0, 0.1, 0.01,
-                                                     help="Lower is better")
+                                                         help="Higher = more consumption = higher risk")
+        lifestyle_data['body_weight_bmi'] = st.slider("Body Weight/BMI", 0.0, 1.0, 0.6, 0.01,
+                                                     help="Higher = higher BMI = higher risk")
+        lifestyle_data['physical_inactivity_level'] = st.slider("Physical Inactivity Level", 0.0, 1.0, 0.7, 0.01, 
+                                                       help="Higher = less activity = higher risk")
+        lifestyle_data['poor_diet_quality'] = st.slider("Poor Diet Quality", 0.0, 1.0, 0.6, 0.01,
+                                                  help="Higher = worse diet = higher risk")
+        lifestyle_data['reproductive_history'] = st.slider("Reproductive History", 0.0, 1.0, 0.5, 0.01,
+                                                         help="Higher = more risk factors = higher risk")
+        lifestyle_data['hormone_use'] = st.slider("Hormone Use", 0.0, 1.0, 0.6, 0.01,
+                                                help="Higher = more hormone use = higher risk")
+        lifestyle_data['family_history_genetic'] = st.slider("Family History/Genetic", 0.0, 1.0, 0.4, 0.01,
+                                                           help="Higher = stronger family history = higher risk")
+        lifestyle_data['smoking_history'] = st.slider("Smoking History", 0.0, 1.0, 0.3, 0.01,
+                                                     help="Higher = more smoking = higher risk")
+        lifestyle_data['environmental_exposures'] = st.slider("Environmental Exposures", 0.0, 1.0, 0.5, 0.01,
+                                                            help="Higher = more exposures = higher risk")
+        lifestyle_data['menstrual_history'] = st.slider("Menstrual History", 0.0, 1.0, 0.6, 0.01,
+                                                       help="Higher = longer estrogen exposure = higher risk")
     
     assess_button = st.button("Assess Risk and Generate Plan", key="assess_button")
 
@@ -211,9 +230,16 @@ if assess_button:
     
     # Calculate interaction features
     try:
-        input_data_all_features['activity_immune_interaction'] = input_data_all_features['physical_activity'] * input_data_all_features['worst concave points']
-        input_data_all_features['diet_cell_interaction'] = input_data_all_features['diet_quality'] * input_data_all_features['mean texture']
-        input_data_all_features['stress_immune_interaction'] = (1 - input_data_all_features['stress_level']) * input_data_all_features['mean smoothness']
+        input_data_all_features['alcohol_immune_interaction'] = input_data_all_features['alcohol_consumption'] * input_data_all_features['worst concave points']
+        input_data_all_features['bmi_hormone_interaction'] = input_data_all_features['body_weight_bmi'] * input_data_all_features['mean perimeter']
+        input_data_all_features['inactivity_immune_interaction'] = input_data_all_features['physical_inactivity_level'] * input_data_all_features['worst concave points']
+        input_data_all_features['poor_diet_cell_interaction'] = input_data_all_features['poor_diet_quality'] * input_data_all_features['mean texture']
+        input_data_all_features['smoking_dna_interaction'] = input_data_all_features['smoking_history'] * input_data_all_features['worst radius']
+        input_data_all_features['hormone_cell_proliferation_interaction'] = input_data_all_features['hormone_use'] * input_data_all_features['mean area']
+        input_data_all_features['genetic_cell_interaction'] = input_data_all_features['family_history_genetic'] * input_data_all_features['worst perimeter']
+        input_data_all_features['menstrual_hormone_interaction'] = input_data_all_features['menstrual_history'] * input_data_all_features['mean concavity']
+        input_data_all_features['reproductive_cell_interaction'] = input_data_all_features['reproductive_history'] * input_data_all_features['mean radius']
+        input_data_all_features['environmental_cell_interaction'] = input_data_all_features['environmental_exposures'] * input_data_all_features['mean smoothness']
     except KeyError as e:
         st.error(f"Error calculating interaction features. Missing base feature: {e}. Cannot proceed.")
         st.stop()

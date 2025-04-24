@@ -16,6 +16,7 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.svm import SVC
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, roc_auc_score
 from sklearn.feature_selection import SelectFromModel
+from sklearn.base import clone
 import joblib
 import shap
 import json
@@ -24,7 +25,10 @@ import random
 import warnings
 
 # Import necessary functions/classes from the utility file
-from risk_assessment_utils import assess_risk_and_plan, MODEL_FILENAME, SCALER_FILENAME, SELECTOR_FILENAME, METADATA_FILENAME
+from risk_assessment_utils import (
+    assess_risk_and_plan, MODEL_FILENAME, SCALER_FILENAME, SELECTOR_FILENAME, METADATA_FILENAME,
+    LIFESTYLE_FEATURES_NAMES, INTERACTION_FEATURES_NAMES
+)
 
 # Ignore convergence warnings for cleaner output
 warnings.filterwarnings('ignore', category=FutureWarning)
@@ -37,36 +41,70 @@ warnings.filterwarnings('ignore', category=ConvergenceWarning)
 SHAP_SUMMARY_PLOT_FILENAME = 'shap_summary_plot.png'
 
 
-# Cell 3: Enhanced Dataset Creation (Function is now in utils)
-def create_enhanced_dataset():
-    # Define constants needed within this function
+# Cell 3: Enhanced Dataset Creation with Evidence-Based Risk Factors from NHANES
+from nhanes_data_loader_fixed import integrate_lifestyle_factors_with_breast_cancer_data
+
+def create_enhanced_dataset(use_nhanes=True):
+    """
+    Create an enhanced breast cancer dataset with evidence-based lifestyle factors.
+    
+    Parameters:
+        use_nhanes: Whether to use real NHANES data (True) or synthetic data (False)
+        
+    Returns:
+        DataFrame with combined data, list of original feature names
+    """
+    # Define constants needed within this function (for reference)
     LIFESTYLE_FEATURES_NAMES = [
-        'physical_activity', 'diet_quality', 'stress_level',
-        'sleep_quality', 'alcohol_consumption', 'smoking_history'
+        'alcohol_consumption', 'body_weight_bmi', 'physical_inactivity_level', 
+        'poor_diet_quality', 'reproductive_history', 'hormone_use',
+        'family_history_genetic', 'smoking_history', 'environmental_exposures', 'menstrual_history'
     ]
+    
+    # These will be created dynamically based on available lifestyle factors
     INTERACTION_FEATURES_NAMES = [
-        'activity_immune_interaction', 'diet_cell_interaction', 'stress_immune_interaction'
+        'alcohol_immune_interaction', 'bmi_hormone_interaction', 'inactivity_immune_interaction',
+        'poor_diet_cell_interaction', 'smoking_dna_interaction', 'hormone_cell_proliferation_interaction',
+        'genetic_cell_interaction', 'menstrual_hormone_interaction', 'reproductive_cell_interaction',
+        'environmental_cell_interaction'
     ]
+    
+    # Use the integrated function from nhanes_data_loader.py
+    print("\n--- Loading Evidence-Based Lifestyle Factors ---")
+    if use_nhanes:
+        print("Using NHANES dataset for lifestyle factors (real data)")
+    else:
+        print("Using synthetic data based on medical evidence")
+        
+    df, original_feature_names = integrate_lifestyle_factors_with_breast_cancer_data(use_nhanes=use_nhanes)
+    
+    # Print model limitations and data sources
+    print_model_limitations()
+    
+    return df, original_feature_names
 
-    # Load original dataset
-    data = load_breast_cancer()
-    df = pd.DataFrame(data.data, columns=data.feature_names)
-    df['target'] = data.target
-
-    # Add synthetic lifestyle features (0-1 scale, higher is better/more)
-    np.random.seed(42) # for reproducibility
-    for feature in LIFESTYLE_FEATURES_NAMES:
-        df[feature] = np.random.uniform(0.1, 0.9, len(df))
-
-    # Create interaction features
-    df['activity_immune_interaction'] = df['physical_activity'] * df['worst concave points']
-    df['diet_cell_interaction'] = df['diet_quality'] * df['mean texture']
-    df['stress_immune_interaction'] = (1 - df['stress_level']) * df['mean smoothness']
-
-    print("--- Enhanced Dataset Created ---")
-    print(f"Added features: {LIFESTYLE_FEATURES_NAMES + INTERACTION_FEATURES_NAMES}")
-    print(f"New shape: {df.shape}")
-    return df, list(data.feature_names)
+def print_model_limitations():
+    """Print important limitations and data sources for the current model."""
+    print("\n--- MODEL LIMITATIONS AND DATA SOURCES ---")
+    print("Data Sources:")
+    print("1. Tumor characteristics: Wisconsin Breast Cancer Dataset (UCI)")
+    print("2. Lifestyle factors: NHANES (National Health and Nutrition Examination Survey)")
+    
+    print("\nLimitations:")
+    print("1. The connection between lifestyle data and tumor data is artificial")
+    print("2. Individual predictions should NOT be used for clinical decisions")
+    print("3. SHAP plots reflect general relationships from medical literature")
+    print("4. For actual risk assessment, consult healthcare professionals")
+    
+    print("\nEvidence-Based Risk Factors:")
+    print("- Alcohol: Even light drinking (1 drink/day) can increase risk by 7-10%")
+    print("- BMI: Being overweight increases risk as excess body fat increases estrogen production")
+    print("- Physical Activity: Regular exercise can reduce risk by 10-20%")
+    print("- Diet Quality: Low intake of fruits and vegetables increases risk")
+    print("- Reproductive History: Late first pregnancy and shorter breastfeeding increases risk")
+    print("- Hormone Use: Hormone replacement therapy increases risk")
+    print("- Smoking: Current or past tobacco use increases risk")
+    print("-------------------------------------------")
 
 
 # Cell 4: Personalized Prevention Plan Generator (Class is now in utils)
@@ -76,8 +114,8 @@ def create_enhanced_dataset():
 
 # --- Main Script Logic ---
 
-# 1. Create Enhanced Dataset
-df_enhanced, original_feature_names = create_enhanced_dataset()
+# 1. Create Enhanced Dataset with NHANES Data
+df_enhanced, original_feature_names = create_enhanced_dataset(use_nhanes=True)
 
 # 2. Prepare Data for Model
 print("\n--- Preparing Data ---")
@@ -197,7 +235,64 @@ for name, model in models.items():
     print(f"{name} - Test ROC AUC: {results[name]['test_roc_auc']:.3f}, Best CV ROC AUC: {results[name]['cv_roc_auc_mean (from tuning if applicable)']}")
 
 
-# 5. Select and Save Best Model (Based on Test ROC AUC)
+# 5. Train Separate Models for Tumor and Lifestyle Features
+print("\n--- Training Separate Models for Tumor and Lifestyle Features ---")
+
+# Define feature groups
+tumor_features = original_feature_names
+lifestyle_features = [col for col in X.columns if col not in tumor_features]
+lifestyle_base_features = [col for col in lifestyle_features if '_interaction' not in col]
+interaction_features = [col for col in lifestyle_features if '_interaction' in col]
+
+print(f"Number of tumor features: {len(tumor_features)}")
+print(f"Number of lifestyle features: {len(lifestyle_base_features)}")
+print(f"Number of interaction features: {len(interaction_features)}")
+
+# Create separate datasets
+X_train_tumor = X_train_scaled_df[tumor_features]
+X_test_tumor = X_test_scaled_df[tumor_features]
+
+X_train_lifestyle = X_train_scaled_df[lifestyle_base_features]
+X_test_lifestyle = X_test_scaled_df[lifestyle_base_features]
+
+X_train_interaction = X_train_scaled_df[interaction_features]
+X_test_interaction = X_test_scaled_df[interaction_features]
+
+# Get the best model from tuning
+best_gb_model = random_search_gb.best_estimator_
+
+# Train separate models
+tumor_model = clone(best_gb_model)  # Use the tuned GB model as base
+lifestyle_model = clone(best_gb_model)
+interaction_model = clone(best_gb_model)
+
+# Train tumor model
+print("Training tumor characteristics model...")
+tumor_model.fit(X_train_tumor, y_train)
+tumor_accuracy = accuracy_score(y_test, tumor_model.predict(X_test_tumor))
+tumor_roc_auc = roc_auc_score(y_test, tumor_model.predict_proba(X_test_tumor)[:, 1])
+print(f"Tumor model - Test Accuracy: {tumor_accuracy:.3f}, ROC AUC: {tumor_roc_auc:.3f}")
+
+# Train lifestyle model
+print("Training lifestyle factors model...")
+lifestyle_model.fit(X_train_lifestyle, y_train)
+lifestyle_accuracy = accuracy_score(y_test, lifestyle_model.predict(X_test_lifestyle))
+lifestyle_roc_auc = roc_auc_score(y_test, lifestyle_model.predict_proba(X_test_lifestyle)[:, 1])
+print(f"Lifestyle model - Test Accuracy: {lifestyle_accuracy:.3f}, ROC AUC: {lifestyle_roc_auc:.3f}")
+
+# Train interaction model
+print("Training interaction features model...")
+interaction_model.fit(X_train_interaction, y_train)
+interaction_accuracy = accuracy_score(y_test, interaction_model.predict(X_test_interaction))
+interaction_roc_auc = roc_auc_score(y_test, interaction_model.predict_proba(X_test_interaction)[:, 1])
+print(f"Interaction model - Test Accuracy: {interaction_accuracy:.3f}, ROC AUC: {interaction_roc_auc:.3f}")
+
+# Save the separate models
+joblib.dump(tumor_model, 'tumor_model.joblib')
+joblib.dump(lifestyle_model, 'lifestyle_model.joblib')
+joblib.dump(interaction_model, 'interaction_model.joblib')
+
+# 6. Select and Save Best Model (Based on Test ROC AUC)
 # Force selection of the tuned model if it was trained
 best_model_name = "Tuned Gradient Boosting" if "Tuned Gradient Boosting" in trained_models else max(results, key=lambda name: results[name]['test_roc_auc'])
 best_model = trained_models[best_model_name]
@@ -208,14 +303,48 @@ print("Saving components...")
 joblib.dump(best_model, MODEL_FILENAME)
 joblib.dump(scaler, SCALER_FILENAME)
 joblib.dump(selector, SELECTOR_FILENAME)
+joblib.dump(tumor_model, 'tumor_model.joblib')
+joblib.dump(lifestyle_model, 'lifestyle_model.joblib')
+joblib.dump(interaction_model, 'interaction_model.joblib')
 
 # Update metadata
 model_metadata = {
-    'model_name': 'Breast Cancer Risk Assessment with Lifestyle Factors',
+    'model_name': 'Breast Cancer Risk Assessment with NHANES-Based Risk Factors',
     'best_model_type': best_model_name,
-    'version': '1.3', # Incremented version after fixing risk score interpretation
+    'version': '3.0', # Incremented version after implementing NHANES data
     'creation_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
     'risk_score_interpretation': 'Risk score represents probability of malignancy (class 0). Higher score = higher cancer risk.',
+    'data_sources': {
+        'tumor_characteristics': 'Wisconsin Breast Cancer Dataset (UCI)',
+        'lifestyle_factors': 'NHANES (National Health and Nutrition Examination Survey)',
+        'nhanes_cycle': '2017-2018',
+        'integration_method': 'Artificial mapping of NHANES lifestyle data to breast cancer outcomes'
+    },
+    'risk_factors': {
+        'alcohol_consumption': 'Risk increases with amount consumed; even light drinking (1 drink/day) can increase risk by 7-10%',
+        'body_weight_bmi': 'Being overweight or obese, especially after menopause, increases risk as excess body fat increases estrogen production',
+        'physical_inactivity_level': 'Low physical activity increases risk; regular exercise can reduce risk by 10-20%',
+        'poor_diet_quality': 'Low intake of fruits, vegetables, and fiber, and high consumption of processed foods increases risk',
+        'reproductive_history': 'Late first pregnancy (after 30), fewer children, and shorter/no breastfeeding increases risk',
+        'hormone_use': 'Hormone replacement therapy (especially combined estrogen-progestin) and certain oral contraceptives increase risk',
+        'smoking_history': 'Current or past tobacco use increases risk, with duration and intensity as important factors'
+    },
+    'nhanes_variables_used': {
+        'ALQ130': 'Days per year had alcoholic beverages',
+        'ALQ120Q': 'Usual number of drinks on drinking days',
+        'BMXBMI': 'Body Mass Index (kg/m²)',
+        'PAQ650': 'Minutes of moderate physical activity per week',
+        'PAQ665': 'Minutes of vigorous physical activity per week',
+        'DBQ700': 'How often eat fruit',
+        'DBQ710': 'How often eat vegetables',
+        'DBQ720': 'How often eat dark green vegetables',
+        'SMQ020': 'Smoked at least 100 cigarettes in life',
+        'SMQ040': 'Do you now smoke cigarettes',
+        'RHQ131': 'Age when first child was born',
+        'RHQ160': 'Ever breastfed children',
+        'RHQ420': 'Ever taken birth control pills',
+        'RHQ540': 'Ever taken hormone replacement therapy'
+    },
     'hyperparameter_tuning_details (GB)': {
         'method': 'RandomizedSearchCV',
         'params_searched': str(param_dist_gb), # Convert dists to string
@@ -226,6 +355,23 @@ model_metadata = {
     'selected_features': selected_features,
     'model_performance_summary': results[best_model_name],
     'full_evaluation_results': results,
+    'separate_models_performance': {
+        'tumor_model': {
+            'accuracy': round(tumor_accuracy, 3),
+            'roc_auc': round(tumor_roc_auc, 3),
+            'features_used': len(tumor_features)
+        },
+        'lifestyle_model': {
+            'accuracy': round(lifestyle_accuracy, 3),
+            'roc_auc': round(lifestyle_roc_auc, 3),
+            'features_used': len(lifestyle_base_features)
+        },
+        'interaction_model': {
+            'accuracy': round(interaction_accuracy, 3),
+            'roc_auc': round(interaction_roc_auc, 3),
+            'features_used': len(interaction_features)
+        }
+    },
     'scaler_details': {'type': 'StandardScaler', 'n_features_in': scaler.n_features_in_ if hasattr(scaler, 'n_features_in_') else 'N/A'},
     'selector_details': {'type': 'SelectFromModel', 'base_estimator': 'RandomForestClassifier', 'threshold': 'median'}
 }
@@ -248,41 +394,113 @@ for model_res in model_metadata['full_evaluation_results'].values():
 with open(METADATA_FILENAME, 'w') as f:
     json.dump(model_metadata, f, indent=4)
 
-print(f"✅ Model ({MODEL_FILENAME}), Scaler ({SCALER_FILENAME}), Selector ({SELECTOR_FILENAME}), and Metadata ({METADATA_FILENAME}) saved successfully.")
+print(f"Model ({MODEL_FILENAME}), Scaler ({SCALER_FILENAME}), Selector ({SELECTOR_FILENAME}), and Metadata ({METADATA_FILENAME}) saved successfully.")
 
-
-# 6. SHAP Analysis
-print("\n--- Performing SHAP Analysis ---")
+# 7. SHAP Analysis for Each Model
+print("\n--- Performing SHAP Analysis for Each Model ---")
 if isinstance(best_model, (RandomForestClassifier, GradientBoostingClassifier)):
     try:
+        # 1. First SHAP plot - for selected features (original model)
         explainer = shap.TreeExplainer(best_model)
         shap_values = explainer.shap_values(X_test_selected_df)
         shap_values_to_plot = shap_values[1] if isinstance(shap_values, list) and len(shap_values) == 2 else shap_values
 
-        # Create two SHAP summary plots - one for all features and one for lifestyle features
-        # 1. Plot for all features
         plt.figure(figsize=(10, 8))
         shap.summary_plot(shap_values_to_plot, X_test_selected_df, show=False)
-        plt.title(f'SHAP Summary Plot for {best_model_name} - All Features')
+        plt.title(f'SHAP Summary Plot for {best_model_name} - Selected Features')
         plt.tight_layout()
         plt.savefig(SHAP_SUMMARY_PLOT_FILENAME)
         plt.close()
         
-        # We're not creating a separate SHAP plot for lifestyle parameters as requested
+        print(f"SHAP summary plot for selected features saved as {SHAP_SUMMARY_PLOT_FILENAME}")
         
-        print(f"SHAP summary plot saved as {SHAP_SUMMARY_PLOT_FILENAME}")
+        # 2. SHAP plot for tumor features
+        print("Creating tumor features SHAP plot...")
+        tumor_explainer = shap.TreeExplainer(tumor_model)
+        tumor_shap_values = tumor_explainer.shap_values(X_test_tumor)
+        tumor_shap_values_to_plot = tumor_shap_values[1] if isinstance(tumor_shap_values, list) and len(tumor_shap_values) == 2 else tumor_shap_values
+        
+        plt.figure(figsize=(12, 10))
+        shap.summary_plot(tumor_shap_values_to_plot, X_test_tumor, show=False)
+        plt.title('SHAP Summary Plot - Tumor Characteristics Only')
+        plt.tight_layout()
+        plt.savefig('shap_tumor_features_plot.png')
+        plt.close()
+        
+        print("SHAP tumor features plot saved as shap_tumor_features_plot.png")
+        
+        # 3. SHAP plot for lifestyle features
+        print("Creating lifestyle factors SHAP plot...")
+        lifestyle_explainer = shap.TreeExplainer(lifestyle_model)
+        lifestyle_shap_values = lifestyle_explainer.shap_values(X_test_lifestyle)
+        lifestyle_shap_values_to_plot = lifestyle_shap_values[1] if isinstance(lifestyle_shap_values, list) and len(lifestyle_shap_values) == 2 else lifestyle_shap_values
+        
+        plt.figure(figsize=(12, 10))
+        shap.summary_plot(lifestyle_shap_values_to_plot, X_test_lifestyle, show=False)
+        plt.title('SHAP Summary Plot - NHANES Lifestyle Factors Only')
+        plt.tight_layout()
+        plt.savefig('shap_lifestyle_features_plot.png')
+        plt.close()
+        
+        print("SHAP lifestyle features plot saved as shap_lifestyle_features_plot.png")
+        
+        # 4. SHAP plot for interaction features
+        print("Creating interaction features SHAP plot...")
+        interaction_explainer = shap.TreeExplainer(interaction_model)
+        interaction_shap_values = interaction_explainer.shap_values(X_test_interaction)
+        interaction_shap_values_to_plot = interaction_shap_values[1] if isinstance(interaction_shap_values, list) and len(interaction_shap_values) == 2 else interaction_shap_values
+        
+        plt.figure(figsize=(12, 10))
+        shap.summary_plot(interaction_shap_values_to_plot, X_test_interaction, show=False)
+        plt.title('SHAP Summary Plot - Interaction Features Only')
+        plt.tight_layout()
+        plt.savefig('shap_interaction_features_plot.png')
+        plt.close()
+        
+        print("SHAP interaction features plot saved as shap_interaction_features_plot.png")
+        
     except Exception as e:
-        print(f"Error during SHAP analysis: {e}")
+        print(f"Error in SHAP analysis: {e}")
+        print("SHAP plots could not be generated. This doesn't affect the model's functionality.")
 else:
     print(f"SHAP analysis skipped (not a compatible tree-based model: {best_model_name}).")
 
 
-# 7. Define Risk Assessment and Prevention Plan Functions (Now imported)
-# --- REMOVED FUNCTION DEFINITION ---
-
-
 # 8. Example Usage (Using imported function)
 print("\n--- Running Example: Assessment and Plan for a Random Test Sample ---")
+
+# Select a random sample from the original TEST set (X_test)
+# Important: Use X_test which has the original (unscaled) feature values
+random_index = np.random.randint(0, len(X_test))
+print(f"Selected random test sample index: {random_index}")
+
+# Get the sample as a DataFrame (ensure columns match the original X)
+random_sample_features = pd.DataFrame([X_test.iloc[random_index]], columns=X.columns)
+
+# Add dummy lifestyle/interaction features if they are missing in X_test (shouldn't happen if X_test derived from df_enhanced)
+# This is a safeguard - ideally X_test already has all columns.
+missing_cols = set(all_feature_names) - set(random_sample_features.columns)
+if missing_cols:
+    print(f"Warning: Random sample missing columns for assessment: {missing_cols}. Adding dummies (0). This might indicate an issue.")
+    for col in missing_cols:
+        random_sample_features[col] = 0
+
+
+# Get the actual target for comparison
+actual_target = y_test.iloc[random_index]
+print(f"Actual Target (0=Malignant, 1=Benign): {actual_target}")
+
+# Ensure the imported function is used
+assessment, plan = assess_risk_and_plan(random_sample_features)
+
+if assessment and plan:
+    print("\n--- Risk Assessment Result ---")
+    print(json.dumps(assessment, indent=2))
+    
+    print("\n--- Personalized Prevention Plan ---")
+    print(json.dumps(plan, indent=2))
+
+print("\n--- Script Finished ---")
 
 # Select a random sample from the original TEST set (X_test)
 # Important: Use X_test which has the original (unscaled) feature values

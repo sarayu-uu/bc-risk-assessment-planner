@@ -520,6 +520,91 @@ def assess_risk_and_plan(input_features_df):
 
     return assessment_result, prevention_plan 
 
+# --- Lifestyle-Focused Risk Assessment ---
+def calculate_lifestyle_risk_score(input_features_df):
+    """
+    Calculate a risk score based primarily on lifestyle factors.
+    This function gives more weight to lifestyle factors than medical factors.
+    
+    Args:
+        input_features_df: DataFrame containing the patient's features
+        
+    Returns:
+        risk_score: A float between 0 and 1 representing the lifestyle-based risk
+        risk_category: A string ('Low', 'Medium', or 'High')
+        explanation: A string explaining the risk assessment
+    """
+    try:
+        # Extract only lifestyle features
+        lifestyle_features = {}
+        for feature in LIFESTYLE_FEATURES_NAMES:
+            if feature in input_features_df.columns:
+                lifestyle_features[feature] = input_features_df[feature].iloc[0]
+        
+        if not lifestyle_features:
+            return None, None, "No lifestyle features found in input data."
+        
+        # Calculate weighted average of lifestyle factors
+        # Higher values indicate higher risk
+        weights = {
+            'alcohol_consumption': 0.15,
+            'body_weight_bmi': 0.15,
+            'physical_inactivity_level': 0.15,
+            'poor_diet_quality': 0.15,
+            'smoking_history': 0.15,
+            'environmental_exposures': 0.05,
+            'hormone_use': 0.05,
+            'family_history_genetic': 0.05,
+            'reproductive_history': 0.05,
+            'menstrual_history': 0.05
+        }
+        
+        total_weight = 0
+        weighted_sum = 0
+        
+        for feature, value in lifestyle_features.items():
+            if feature in weights:
+                weighted_sum += value * weights[feature]
+                total_weight += weights[feature]
+        
+        if total_weight == 0:
+            return None, None, "Could not calculate lifestyle risk score: no valid features found."
+        
+        # Normalize to get final risk score between 0 and 1
+        lifestyle_risk_score = weighted_sum / total_weight
+        
+        # Apply a sigmoid transformation to make the distribution more realistic
+        # This helps differentiate between low, medium, and high risk more clearly
+        import math
+        adjusted_score = 1 / (1 + math.exp(-10 * (lifestyle_risk_score - 0.5)))
+        
+        # Determine risk category
+        if adjusted_score >= 0.7:
+            risk_category = "High"
+        elif adjusted_score >= 0.3:
+            risk_category = "Medium"
+        else:
+            risk_category = "Low"
+        
+        # Create explanation
+        high_risk_factors = []
+        for feature, value in lifestyle_features.items():
+            if value >= 0.7:
+                high_risk_factors.append(feature.replace('_', ' ').title())
+        
+        if high_risk_factors:
+            explanation = f"Your lifestyle risk assessment is based on {len(lifestyle_features)} factors. "
+            explanation += f"Key high-risk factors include: {', '.join(high_risk_factors)}."
+        else:
+            explanation = f"Your lifestyle risk assessment is based on {len(lifestyle_features)} factors. "
+            explanation += "No significant high-risk lifestyle factors were identified."
+        
+        return adjusted_score, risk_category, explanation
+        
+    except Exception as e:
+        print(f"Error calculating lifestyle risk score: {e}")
+        return None, None, f"Error calculating lifestyle risk score: {str(e)}"
+
 # --- Individual SHAP Plot Generation ---
 def generate_individual_shap_plot(input_features_df, top_n=7, plot_type='bar'):
     """

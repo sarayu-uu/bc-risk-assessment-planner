@@ -9,6 +9,8 @@ import random # Ensure random is imported
 from risk_assessment_utils import (
     assess_risk_and_plan,
     generate_individual_shap_plot,
+    calculate_lifestyle_risk_score,
+    PreventionPlanGenerator,
     METADATA_FILENAME, 
     LIFESTYLE_FEATURES_NAMES,
     INTERACTION_FEATURES_NAMES,
@@ -180,8 +182,40 @@ if assess_button:
 
         if input_features_df is not None:
             try:
+                print("Calculating lifestyle risk score...") # Debug print
+                
+                # Calculate lifestyle-focused risk score
+                lifestyle_risk_score, lifestyle_risk_category, lifestyle_explanation = calculate_lifestyle_risk_score(input_features_df)
+                
+                # Also run the full model for comparison and to generate the prevention plan
                 print("Calling assess_risk_and_plan...") # Debug print
-                assessment_result, prevention_plan = assess_risk_and_plan(input_features_df)
+                full_assessment_result, prevention_plan = assess_risk_and_plan(input_features_df)
+                
+                # If the full assessment succeeded, use its prevention plan but override the risk score
+                if full_assessment_result and prevention_plan:
+                    # Create a new assessment result that prioritizes lifestyle factors
+                    assessment_result = {
+                        'risk_score': round(lifestyle_risk_score, 3),
+                        'risk_category': lifestyle_risk_category,
+                        'explanation': lifestyle_explanation,
+                        'full_model_risk': round(full_assessment_result.get('risk_score', 0), 3)
+                    }
+                    
+                    # Update the prevention plan with the lifestyle-focused risk category
+                    prevention_plan['risk_score'] = round(lifestyle_risk_score, 3)
+                    prevention_plan['risk_category'] = lifestyle_risk_category
+                else:
+                    # If full assessment failed, create a basic assessment result and prevention plan
+                    assessment_result = {
+                        'risk_score': round(lifestyle_risk_score, 3),
+                        'risk_category': lifestyle_risk_category,
+                        'explanation': lifestyle_explanation
+                    }
+                    
+                    # Create a basic prevention plan
+                    prevention_planner = PreventionPlanGenerator() # Import this at the top if needed
+                    prevention_plan = prevention_planner.generate_plan(input_features_df, lifestyle_risk_score)
+                
                 # Store results in session state to persist them
                 st.session_state.assessment_result = assessment_result
                 st.session_state.prevention_plan = prevention_plan
@@ -223,17 +257,26 @@ if st.session_state.get('show_results', False):
 
     if assessment_result and prevention_plan:
         # --- Display Assessment Result --- 
-        st.subheader("Risk Assessment Result")
+        st.subheader("Lifestyle-Based Risk Assessment")
+        st.markdown("**This assessment focuses primarily on lifestyle factors that affect breast cancer risk.**")
+        
         risk_score = assessment_result.get('risk_score', 'N/A')
         risk_cat = assessment_result.get('risk_category', 'N/A')
+        
         # Ensure risk_score is a number before formatting
         if isinstance(risk_score, (int, float)):
-            st.metric(label="Predicted Risk Score", value=f"{risk_score:.3f}",
-                      help="Score ranges from 0 (low risk) to 1 (high risk)")
+            st.metric(label="Lifestyle Risk Score", value=f"{risk_score:.3f}",
+                      help="Score ranges from 0 (low risk) to 1 (high risk), based primarily on lifestyle factors")
         else:
-             st.metric(label="Predicted Risk Score", value="N/A")
+             st.metric(label="Lifestyle Risk Score", value="N/A")
+        
         st.markdown(f"**Risk Category:** {risk_cat}")
         st.markdown(assessment_result.get('explanation', ''))
+        
+        # If we have the full model risk score, show it for comparison
+        if 'full_model_risk' in assessment_result:
+            st.info("Note: The full model (including medical factors) calculated a risk score of " + 
+                   f"{assessment_result['full_model_risk']:.3f}, but your assessment is focused on lifestyle factors.")
         
         # --- Personalized Lifestyle Risk Analysis ---
         st.subheader("Your Lifestyle Risk Factors")

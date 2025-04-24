@@ -4,18 +4,46 @@ import joblib
 import json
 import random
 import warnings
-from sklearn.exceptions import NotFittedError
-import google.generativeai as genai # Import Gemini library
 import os # To read API key from environment
-from dotenv import load_dotenv # Import dotenv
-import matplotlib.pyplot as plt
-import shap
 import io
-from PIL import Image
 import base64
 
-# --- Load Environment Variables --- 
-load_dotenv() # Load variables from .env file into environment
+# Import scikit-learn components with error handling
+try:
+    from sklearn.exceptions import NotFittedError
+except ImportError:
+    print("Warning: sklearn.exceptions.NotFittedError could not be imported. Using a custom exception class.")
+    class NotFittedError(Exception):
+        """Exception class to raise if estimator is used before fitting."""
+        pass
+
+# Import optional dependencies with error handling
+try:
+    from dotenv import load_dotenv
+    # --- Load Environment Variables --- 
+    load_dotenv() # Load variables from .env file into environment
+except ImportError:
+    print("Warning: python-dotenv not installed. Environment variables must be set manually.")
+
+try:
+    import matplotlib
+    matplotlib.use('Agg')  # Use non-interactive backend
+    import matplotlib.pyplot as plt
+except ImportError:
+    print("Warning: matplotlib could not be imported. Visualization features will be disabled.")
+    plt = None
+
+try:
+    import shap
+except ImportError:
+    print("Warning: shap could not be imported. SHAP explanations will be disabled.")
+    shap = None
+
+try:
+    from PIL import Image
+except ImportError:
+    print("Warning: PIL could not be imported. Image processing features will be disabled.")
+    Image = None
 
 # --- Constants (Centralized) ---
 LIFESTYLE_FEATURES_NAMES = [
@@ -40,21 +68,28 @@ SHAP_SUMMARY_PLOT_FILENAME = 'shap_summary_plot.png'
 LIFESTYLE_SHAP_PLOT_FILENAME = 'shap_lifestyle_features_plot.png'
 MEDICAL_SHAP_PLOT_FILENAME = 'shap_medical_features_plot.png'
 
-# --- Configure Gemini API Key --- 
-API_KEY = os.getenv("GOOGLE_API_KEY") # Read from environment
+# Initialize Gemini variables
+GEMINI_AVAILABLE = False
+gemini_model = None
 
-GEMINI_AVAILABLE = False # Default to False
-if not API_KEY:
-    print("\nWARNING: GOOGLE_API_KEY not found in environment variables or .env file. Dynamic plan generation will be disabled.\n")
-else:
-    try:
-        genai.configure(api_key=API_KEY)
-        # Initialize the Gemini model
-        gemini_model = genai.GenerativeModel('gemini-1.5-flash')
-        print("Gemini API configured successfully using 'gemini-1.5-flash' model.")
-        GEMINI_AVAILABLE = True
-    except Exception as e:
-        print(f"Error configuring Gemini API from environment variable: {e}. Dynamic plan generation will be disabled.")
+# --- Configure Gemini API Key (with robust error handling) --- 
+try:
+    import google.generativeai as genai
+    API_KEY = os.getenv("GOOGLE_API_KEY") # Read from environment
+    
+    if not API_KEY:
+        print("\nWARNING: GOOGLE_API_KEY not found in environment variables or .env file. Dynamic plan generation will be disabled.\n")
+    else:
+        try:
+            genai.configure(api_key=API_KEY)
+            # Initialize the Gemini model
+            gemini_model = genai.GenerativeModel('gemini-1.5-flash')
+            print("Gemini API configured successfully using 'gemini-1.5-flash' model.")
+            GEMINI_AVAILABLE = True
+        except Exception as e:
+            print(f"Error configuring Gemini API from environment variable: {e}. Dynamic plan generation will be disabled.")
+except ImportError:
+    print("Warning: google-generativeai package not installed. AI plan generation will be disabled.")
 
 # --- Enhanced Prevention Plan Generator with Dynamic Elements ---
 class PreventionPlanGenerator:
@@ -501,6 +536,11 @@ def generate_individual_shap_plot(input_features_df, top_n=7, plot_type='bar'):
         base64_image: Base64 encoded image of the plot
         top_features: List of the top lifestyle factors and their values
     """
+    # Check if required libraries are available
+    if plt is None or Image is None:
+        print("Warning: matplotlib or PIL not available. Returning only text analysis without visualization.")
+        img_str = None
+    
     try:
         # Extract only lifestyle features
         lifestyle_features = LIFESTYLE_FEATURES_NAMES.copy()
@@ -530,55 +570,67 @@ def generate_individual_shap_plot(input_features_df, top_n=7, plot_type='bar'):
         # Sort by risk score (highest risk first) and take top N
         lifestyle_risk_factors = sorted(lifestyle_risk_factors, key=lambda x: x['risk_score'], reverse=True)[:top_n]
         
-        # Create a figure to hold the plot
-        plt.figure(figsize=(10, 6))
-        
-        # Extract data for plotting
-        features = [item['feature'].replace('_', ' ').title() for item in lifestyle_risk_factors]
-        risk_scores = [item['risk_score'] for item in lifestyle_risk_factors]
-        
-        # Create the bar plot
-        bars = plt.barh(features, risk_scores)
-        
-        # Color the bars based on risk level
-        for i, bar in enumerate(bars):
-            # Red for high risk, yellow for medium, green for low
-            if risk_scores[i] > 0.66:
-                bar.set_color('red')
-            elif risk_scores[i] > 0.33:
-                bar.set_color('orange')
-            else:
-                bar.set_color('green')
-        
-        # Add labels and title
-        plt.xlabel('Risk Level')
-        plt.ylabel('Lifestyle Factor')
-        plt.title('Your Lifestyle Risk Factors')
-        plt.xlim(0, 1)
-        
-        # Add a legend
-        from matplotlib.patches import Patch
-        legend_elements = [
-            Patch(facecolor='red', label='High Risk'),
-            Patch(facecolor='orange', label='Medium Risk'),
-            Patch(facecolor='green', label='Low Risk')
-        ]
-        plt.legend(handles=legend_elements, loc='lower right')
-        
-        plt.tight_layout()
-        
-        # Save plot to a bytes buffer
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png', dpi=100)
-        plt.close()
-        buf.seek(0)
-        
-        # Convert to base64 for embedding in HTML
-        img = Image.open(buf)
-        buffer = io.BytesIO()
-        img.save(buffer, format='PNG')
-        buffer.seek(0)
-        img_str = base64.b64encode(buffer.read()).decode('utf-8')
+        # Generate visualization only if required libraries are available
+        img_str = None
+        if plt is not None and Image is not None:
+            try:
+                # Create a figure to hold the plot
+                plt.figure(figsize=(10, 6))
+                
+                # Extract data for plotting
+                features = [item['feature'].replace('_', ' ').title() for item in lifestyle_risk_factors]
+                risk_scores = [item['risk_score'] for item in lifestyle_risk_factors]
+                
+                # Create the bar plot
+                bars = plt.barh(features, risk_scores)
+                
+                # Color the bars based on risk level
+                for i, bar in enumerate(bars):
+                    # Red for high risk, yellow for medium, green for low
+                    if risk_scores[i] > 0.66:
+                        bar.set_color('red')
+                    elif risk_scores[i] > 0.33:
+                        bar.set_color('orange')
+                    else:
+                        bar.set_color('green')
+                
+                # Add labels and title
+                plt.xlabel('Risk Level')
+                plt.ylabel('Lifestyle Factor')
+                plt.title('Your Lifestyle Risk Factors')
+                plt.xlim(0, 1)
+                
+                # Add a legend
+                try:
+                    from matplotlib.patches import Patch
+                    legend_elements = [
+                        Patch(facecolor='red', label='High Risk'),
+                        Patch(facecolor='orange', label='Medium Risk'),
+                        Patch(facecolor='green', label='Low Risk')
+                    ]
+                    plt.legend(handles=legend_elements, loc='lower right')
+                except ImportError:
+                    # Skip legend if Patch is not available
+                    pass
+                
+                plt.tight_layout()
+                
+                # Save plot to a bytes buffer
+                buf = io.BytesIO()
+                plt.savefig(buf, format='png', dpi=100)
+                plt.close()
+                buf.seek(0)
+                
+                # Convert to base64 for embedding in HTML
+                img = Image.open(buf)
+                buffer = io.BytesIO()
+                img.save(buffer, format='PNG')
+                buffer.seek(0)
+                img_str = base64.b64encode(buffer.read()).decode('utf-8')
+            except Exception as viz_error:
+                print(f"Error generating visualization: {viz_error}")
+                # Continue with text analysis even if visualization fails
+                img_str = None
         
         # Format the top features for display
         top_features = []

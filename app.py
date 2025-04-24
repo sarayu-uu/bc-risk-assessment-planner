@@ -246,10 +246,13 @@ if st.session_state.get('show_results', False):
             with st.spinner("Generating your personalized lifestyle risk factor analysis..."):
                 risk_img, top_factors = generate_individual_shap_plot(input_features_df, top_n=7)
                 
-                if risk_img and top_factors:
-                    # Display the visualization
-                    st.markdown("This chart shows how your lifestyle choices are influencing your risk assessment:")
-                    st.image(f"data:image/png;base64,{risk_img}", use_container_width=True)
+                if top_factors:  # Check if we have factor analysis, even if visualization failed
+                    # Display the visualization if available
+                    if risk_img:
+                        st.markdown("This chart shows how your lifestyle choices are influencing your risk assessment:")
+                        st.image(f"data:image/png;base64,{risk_img}", use_container_width=True)
+                    else:
+                        st.info("Visualization could not be generated, but text analysis is available below.")
                     
                     # Display the top factors in a more readable format
                     st.markdown("### Your Key Lifestyle Risk Factors Explained")

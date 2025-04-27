@@ -75,10 +75,17 @@ gemini_model = None
 # --- Configure Gemini API Key (with robust error handling) --- 
 try:
     import google.generativeai as genai
-    API_KEY = os.getenv("GOOGLE_API_KEY") # Read from environment
     
-    if not API_KEY:
-        print("\nWARNING: GOOGLE_API_KEY not found in environment variables or .env file. Dynamic plan generation will be disabled.\n")
+    # Get API key from environment variables
+    API_KEY = os.getenv("GOOGLE_API_KEY")
+    
+    if not API_KEY or API_KEY == "your_new_api_key_from_google_ai_studio":
+        print("\nWARNING: Valid GOOGLE_API_KEY not found in environment variables.")
+        print("To enable Gemini AI features:")
+        print("1. Get a valid API key from https://makersuite.google.com/app/apikey")
+        print("2. Update your .env file with: GOOGLE_API_KEY=your_new_api_key")
+        print("3. Restart the application\n")
+        GEMINI_AVAILABLE = False
     else:
         try:
             genai.configure(api_key=API_KEY)
@@ -87,7 +94,8 @@ try:
             print("Gemini API configured successfully using 'gemini-1.5-flash' model.")
             GEMINI_AVAILABLE = True
         except Exception as e:
-            print(f"Error configuring Gemini API from environment variable: {e}. Dynamic plan generation will be disabled.")
+            print(f"Error configuring Gemini API: {e}. Dynamic plan generation will be disabled.")
+            GEMINI_AVAILABLE = False
 except ImportError:
     print("Warning: google-generativeai package not installed. AI plan generation will be disabled.")
 

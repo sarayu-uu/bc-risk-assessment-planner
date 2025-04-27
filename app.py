@@ -372,7 +372,7 @@ if st.session_state.get('show_results', False):
         st.subheader("AI Chatbot") # Keep subheader outside expander
 
         if not GEMINI_AVAILABLE:
-            st.info("💡 AI Chatbot requires setup: Add your GOOGLE_API_KEY to Streamlit Secrets to enable it.")
+            st.info("💡 AI Chatbot requires setup: Add a valid GOOGLE_API_KEY to your .env file. See README.md for instructions.")
         else:
             print("AI Chatbot section available.") # Debug print
             # Use an expander for the chatbot

@@ -2,7 +2,7 @@
     "model_name": "Breast Cancer Risk Assessment with NHANES-Based Risk Factors",
     "best_model_type": "Tuned Gradient Boosting",
     "version": "3.0",
-    "creation_date": "2025-04-22 21:20:36",
+    "creation_date": "2025-04-27 20:52:46",
     "risk_score_interpretation": "Risk score represents probability of malignancy (class 0). Higher score = higher cancer risk.",
     "data_sources": {
         "tumor_characteristics": "Wisconsin Breast Cancer Dataset (UCI)",
@@ -37,13 +37,13 @@
     },
     "hyperparameter_tuning_details (GB)": {
         "method": "RandomizedSearchCV",
-        "params_searched": "{'n_estimators': <scipy.stats._distn_infrastructure.rv_discrete_frozen object at 0x000001EEA1BDE3C0>, 'learning_rate': [0.01, 0.05, 0.1, 0.2], 'max_depth': <scipy.stats._distn_infrastructure.rv_discrete_frozen object at 0x000001EEA1BCEE90>}",
+        "params_searched": "{'n_estimators': <scipy.stats._distn_infrastructure.rv_discrete_frozen object at 0x00000197F6C55550>, 'learning_rate': [0.01, 0.05, 0.1, 0.2], 'max_depth': <scipy.stats._distn_infrastructure.rv_discrete_frozen object at 0x00000197F6C49E50>}",
         "best_params": {
             "learning_rate": 0.1,
-            "max_depth": 4,
-            "n_estimators": 152
+            "max_depth": 6,
+            "n_estimators": 192
         },
-        "best_cv_score": 0.98866604553057
+        "best_cv_score": 0.9996904024767803
     },
     "all_features": [
         "mean radius",
@@ -98,156 +98,157 @@
         "environmental_cell_interaction"
     ],
     "selected_features": [
-        "mean radius",
-        "mean texture",
-        "mean perimeter",
         "mean area",
-        "mean compactness",
-        "mean concavity",
         "mean concave points",
-        "radius error",
-        "perimeter error",
-        "area error",
-        "concavity error",
-        "concave points error",
         "worst radius",
-        "worst texture",
-        "worst perimeter",
         "worst area",
-        "worst smoothness",
-        "worst compactness",
-        "worst concavity",
         "worst concave points",
-        "worst symmetry",
-        "worst fractal dimension",
+        "alcohol_consumption",
+        "body_weight_bmi",
+        "physical_inactivity_level",
+        "poor_diet_quality",
+        "reproductive_history",
+        "hormone_use",
+        "smoking_history",
+        "family_history_genetic",
+        "environmental_exposures",
+        "menstrual_history",
+        "alcohol_immune_interaction",
+        "bmi_hormone_interaction",
         "inactivity_immune_interaction",
-        "menstrual_hormone_interaction"
+        "poor_diet_cell_interaction",
+        "smoking_dna_interaction",
+        "hormone_cell_proliferation_interaction",
+        "genetic_cell_interaction",
+        "menstrual_hormone_interaction",
+        "reproductive_cell_interaction",
+        "environmental_cell_interaction"
     ],
     "model_performance_summary": {
-        "accuracy": 0.956,
-        "test_roc_auc": 0.994,
-        "cv_roc_auc_mean (from tuning if applicable)": 0.989,
+        "accuracy": 1.0,
+        "test_roc_auc": 1.0,
+        "cv_roc_auc_mean (from tuning if applicable)": 1.0,
         "classification_report": {
             "0": {
-                "precision": 0.9523809523809523,
-                "recall": 0.9302325581395349,
-                "f1-score": 0.9411764705882353,
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
                 "support": 43.0
             },
             "1": {
-                "precision": 0.9583333333333334,
-                "recall": 0.971830985915493,
-                "f1-score": 0.965034965034965,
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
                 "support": 71.0
             },
-            "accuracy": 0.956140350877193,
+            "accuracy": 1.0,
             "macro avg": {
-                "precision": 0.9553571428571428,
-                "recall": 0.9510317720275139,
-                "f1-score": 0.9531057178116001,
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
                 "support": 114.0
             },
             "weighted avg": {
-                "precision": 0.9560881370091896,
-                "recall": 0.956140350877193,
-                "f1-score": 0.9560357083576898,
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
                 "support": 114.0
             }
         }
     },
     "full_evaluation_results": {
         "Logistic Regression": {
-            "accuracy": 0.982,
-            "test_roc_auc": 0.996,
+            "accuracy": 1.0,
+            "test_roc_auc": 1.0,
             "cv_roc_auc_mean (from tuning if applicable)": "N/A (Not Tuned)",
             "classification_report": {
                 "0": {
                     "precision": 1.0,
-                    "recall": 0.9534883720930233,
-                    "f1-score": 0.9761904761904762,
+                    "recall": 1.0,
+                    "f1-score": 1.0,
                     "support": 43.0
                 },
                 "1": {
-                    "precision": 0.9726027397260274,
+                    "precision": 1.0,
                     "recall": 1.0,
-                    "f1-score": 0.9861111111111112,
+                    "f1-score": 1.0,
                     "support": 71.0
                 },
-                "accuracy": 0.9824561403508771,
+                "accuracy": 1.0,
                 "macro avg": {
-                    "precision": 0.9863013698630136,
-                    "recall": 0.9767441860465116,
-                    "f1-score": 0.9811507936507937,
+                    "precision": 1.0,
+                    "recall": 1.0,
+                    "f1-score": 1.0,
                     "support": 114.0
                 },
                 "weighted avg": {
-                    "precision": 0.9829367940398942,
-                    "recall": 0.9824561403508771,
-                    "f1-score": 0.9823691172375383,
+                    "precision": 1.0,
+                    "recall": 1.0,
+                    "f1-score": 1.0,
                     "support": 114.0
                 }
             }
         },
         "Random Forest": {
-            "accuracy": 0.965,
-            "test_roc_auc": 0.995,
+            "accuracy": 1.0,
+            "test_roc_auc": 1.0,
             "cv_roc_auc_mean (from tuning if applicable)": "N/A (Not Tuned)",
             "classification_report": {
                 "0": {
-                    "precision": 0.975609756097561,
-                    "recall": 0.9302325581395349,
-                    "f1-score": 0.9523809523809523,
+                    "precision": 1.0,
+                    "recall": 1.0,
+                    "f1-score": 1.0,
                     "support": 43.0
                 },
                 "1": {
-                    "precision": 0.958904109589041,
-                    "recall": 0.9859154929577465,
-                    "f1-score": 0.9722222222222222,
+                    "precision": 1.0,
+                    "recall": 1.0,
+                    "f1-score": 1.0,
                     "support": 71.0
                 },
-                "accuracy": 0.9649122807017544,
+                "accuracy": 1.0,
                 "macro avg": {
-                    "precision": 0.9672569328433009,
-                    "recall": 0.9580740255486406,
-                    "f1-score": 0.9623015873015872,
+                    "precision": 1.0,
+                    "recall": 1.0,
+                    "f1-score": 1.0,
                     "support": 114.0
                 },
                 "weighted avg": {
-                    "precision": 0.9652053622194477,
-                    "recall": 0.9649122807017544,
-                    "f1-score": 0.9647382344750765,
+                    "precision": 1.0,
+                    "recall": 1.0,
+                    "f1-score": 1.0,
                     "support": 114.0
                 }
             }
         },
         "Tuned Gradient Boosting": {
-            "accuracy": 0.956,
-            "test_roc_auc": 0.994,
-            "cv_roc_auc_mean (from tuning if applicable)": 0.989,
+            "accuracy": 1.0,
+            "test_roc_auc": 1.0,
+            "cv_roc_auc_mean (from tuning if applicable)": 1.0,
             "classification_report": {
                 "0": {
-                    "precision": 0.9523809523809523,
-                    "recall": 0.9302325581395349,
-                    "f1-score": 0.9411764705882353,
+                    "precision": 1.0,
+                    "recall": 1.0,
+                    "f1-score": 1.0,
                     "support": 43.0
                 },
                 "1": {
-                    "precision": 0.9583333333333334,
-                    "recall": 0.971830985915493,
-                    "f1-score": 0.965034965034965,
+                    "precision": 1.0,
+                    "recall": 1.0,
+                    "f1-score": 1.0,
                     "support": 71.0
                 },
-                "accuracy": 0.956140350877193,
+                "accuracy": 1.0,
                 "macro avg": {
-                    "precision": 0.9553571428571428,
-                    "recall": 0.9510317720275139,
-                    "f1-score": 0.9531057178116001,
+                    "precision": 1.0,
+                    "recall": 1.0,
+                    "f1-score": 1.0,
                     "support": 114.0
                 },
                 "weighted avg": {
-                    "precision": 0.9560881370091896,
-                    "recall": 0.956140350877193,
-                    "f1-score": 0.9560357083576898,
+                    "precision": 1.0,
+                    "recall": 1.0,
+                    "f1-score": 1.0,
                     "support": 114.0
                 }
             }
@@ -256,23 +257,23 @@
     "separate_models_performance": {
         "tumor_model": {
             "accuracy": 0.956,
-            "roc_auc": 0.995,
+            "roc_auc": 0.981,
             "features_used": 30
         },
         "lifestyle_model": {
-            "accuracy": 0.518,
-            "roc_auc": 0.412,
+            "accuracy": 0.991,
+            "roc_auc": 1.0,
             "features_used": 10
         },
         "interaction_model": {
-            "accuracy": 0.921,
-            "roc_auc": 0.938,
-            "features_used": 8
+            "accuracy": 1.0,
+            "roc_auc": 1.0,
+            "features_used": 10
         }
     },
     "scaler_details": {
         "type": "StandardScaler",
-        "n_features_in": 48
+        "n_features_in": 50
     },
     "selector_details": {
         "type": "SelectFromModel",

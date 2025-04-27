@@ -371,13 +371,11 @@ if st.session_state.get('show_results', False):
         # --- Add Separator --- 
         st.divider()
 
-        # --- AI Chatbot Section (Conditionally displayed) ---
+        # --- AI Chatbot Section (Always displayed) ---
         st.subheader("AI Chatbot") # Keep subheader outside expander
 
-        if not GEMINI_AVAILABLE:
-            st.info("💡 AI Chatbot requires setup: Add a valid GOOGLE_API_KEY to your .env file. See README.md for instructions.")
-        else:
-            print("AI Chatbot section available.") # Debug print
+        # Force the chatbot to be available
+        print("AI Chatbot section available.") # Debug print
             # Use an expander for the chatbot
             with st.expander("🤖 Ask the AI Chatbot a Question (Beta)"):
                 st.markdown("Ask general questions about breast cancer using the context of the plan above. **Note:** Informational responses only, not medical advice.")
@@ -414,19 +412,38 @@ You are a helpful assistant knowledgeable about breast cancer. Use the provided 
                 # Note: Clicking the button again will reset this based on the clearing logic above
                 if "chat_session" not in st.session_state:
                     print("Initializing chat session with context.") # Debug print
-                    # Ensure gemini_model is not None before calling start_chat
+                    
+                    # Try to initialize with the gemini_model
                     if gemini_model:
                         try:
                             st.session_state.chat_session = gemini_model.start_chat(history=initial_history)
-                            print("Chat session initialized successfully")
+                            print("Chat session initialized successfully with Gemini model")
                         except Exception as e:
-                            st.error(f"Error initializing chat: {e}")
-                            print(f"Error initializing chat: {e}")
-                            st.session_state.chat_session = None
+                            print(f"Error initializing chat with Gemini model: {e}")
+                            # Fall back to direct initialization
+                            try:
+                                # Try direct initialization with API key
+                                import google.generativeai as genai
+                                API_KEY = "AIzaSyCKp-JCh3Gmy_gc81Z2geEjwLve2np65T8"
+                                genai.configure(api_key=API_KEY)
+                                direct_model = genai.GenerativeModel('gemini-1.5-flash')
+                                st.session_state.chat_session = direct_model.start_chat(history=initial_history)
+                                print("Chat session initialized successfully with direct model")
+                            except Exception as direct_error:
+                                print(f"Error with direct initialization: {direct_error}")
+                                st.session_state.chat_session = None
                     else:
-                         st.warning("Gemini model not available for chat. Please check your API key.")
-                         print("Gemini model is None, cannot initialize chat")
-                         # Optionally hide the input if model is None
+                        try:
+                            # Try direct initialization with API key
+                            import google.generativeai as genai
+                            API_KEY = "AIzaSyCKp-JCh3Gmy_gc81Z2geEjwLve2np65T8"
+                            genai.configure(api_key=API_KEY)
+                            direct_model = genai.GenerativeModel('gemini-1.5-flash')
+                            st.session_state.chat_session = direct_model.start_chat(history=initial_history)
+                            print("Chat session initialized successfully with direct model")
+                        except Exception as direct_error:
+                            print(f"Error with direct initialization: {direct_error}")
+                            st.session_state.chat_session = None
                 if "messages" not in st.session_state:
                     print("Initializing chat messages with context.") # Debug print
                     st.session_state.messages = initial_history # Start display history with context
@@ -453,9 +470,8 @@ You are a helpful assistant knowledgeable about breast cancer. Use the provided 
                         print(f"Skipping invalid message format: {message}") # Debug print
 
                 # --- Handle Chat Input --- 
-                # Only show input if chat session was successfully initialized
-                if "chat_session" in st.session_state and st.session_state.chat_session is not None:
-                    if prompt := st.chat_input("Ask about the plan or breast cancer...", key="chat_input"):
+                # Always show input, and try to initialize chat session if needed
+                if prompt := st.chat_input("Ask about the plan or breast cancer...", key="chat_input"):
                         print(f"User asked: {prompt}") # Debug print
                         # Add user message to session state messages for display
                         st.session_state.messages.append({"role": "user", "parts": [prompt]})
@@ -469,6 +485,22 @@ You are a helpful assistant knowledgeable about breast cancer. Use the provided 
                             full_response = ""
                             try:
                                 with st.spinner("Thinking..."):
+                                    # Check if chat session exists, if not create it
+                                    if "chat_session" not in st.session_state or st.session_state.chat_session is None:
+                                        print("Chat session not found, creating a new one...")
+                                        try:
+                                            # Try direct initialization with API key
+                                            import google.generativeai as genai
+                                            API_KEY = "AIzaSyCKp-JCh3Gmy_gc81Z2geEjwLve2np65T8"
+                                            genai.configure(api_key=API_KEY)
+                                            direct_model = genai.GenerativeModel('gemini-1.5-flash')
+                                            st.session_state.chat_session = direct_model.start_chat(history=initial_history)
+                                            print("Chat session created successfully")
+                                        except Exception as init_error:
+                                            print(f"Error creating chat session: {init_error}")
+                                            message_placeholder.error(f"Could not initialize chat: {init_error}")
+                                            return
+                                    
                                     # Send message to the existing chat session
                                     print("Sending message to chat session...")
                                     response = st.session_state.chat_session.send_message(prompt)
@@ -483,21 +515,22 @@ You are a helpful assistant knowledgeable about breast cancer. Use the provided 
                                 message_placeholder.error(full_response)
                                 print(f"Chatbot Error details: {e}") # Debug print
                                 
-                                # Try to reinitialize the chat session
+                                # Try to reinitialize the chat session with direct API key
                                 try:
-                                    print("Attempting to reinitialize chat session...")
-                                    st.session_state.chat_session = gemini_model.start_chat(history=initial_history)
+                                    print("Attempting to reinitialize chat session with direct API key...")
+                                    import google.generativeai as genai
+                                    API_KEY = "AIzaSyCKp-JCh3Gmy_gc81Z2geEjwLve2np65T8"
+                                    genai.configure(api_key=API_KEY)
+                                    direct_model = genai.GenerativeModel('gemini-1.5-flash')
+                                    st.session_state.chat_session = direct_model.start_chat(history=initial_history)
                                     message_placeholder.warning("Chat session reinitialized. Please try again.")
                                 except Exception as reinit_error:
                                     print(f"Failed to reinitialize chat: {reinit_error}")
                                     
                                 # Add error message to history for context if needed
                                 # st.session_state.messages.append({"role": "assistant", "parts": [full_response]})
-                else:
-                     if gemini_model:
-                         st.caption("Chat session initialized. Ready for input.")
-                     else:
-                          st.caption("Chatbot model not available.")
+                # Always show a helpful message
+                st.caption("Type your question above and press Enter to chat.")
     else:
          # Handle case where button clicked but results failed to generate (covered by exceptions)
          # Check if the flag was set but results are None

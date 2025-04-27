@@ -81,7 +81,7 @@ try:
     load_dotenv()
     
     # Hardcode the API key that we know works
-    API_KEY = "AIzaSyAN9Z0vJ2rKlv9he60OfwhTPzMavrlQODg"
+    API_KEY = "AIzaSyCKp-JCh3Gmy_gc81Z2geEjwLve2np65T8"
     
     # Configure Gemini API
     print(f"Configuring Gemini API with hardcoded key")
@@ -89,12 +89,17 @@ try:
     
     # Initialize the Gemini model
     gemini_model = genai.GenerativeModel('gemini-1.5-flash')
-    print("Gemini model initialized successfully")
+    
+    # Test the model to make sure it works
+    test_response = gemini_model.generate_content("Hello")
+    print(f"Gemini model initialized and tested successfully: {test_response.text[:20]}...")
     
     # GEMINI_AVAILABLE is already set to True above
 except Exception as e:
     print(f"Error configuring Gemini API: {e}")
-    # Keep GEMINI_AVAILABLE as True anyway to force the chatbot to appear
+    # Set GEMINI_AVAILABLE to False if there's an error
+    GEMINI_AVAILABLE = False
+    gemini_model = None
 except ImportError:
     print("Warning: google-generativeai package not installed. AI plan generation will be disabled.")
 

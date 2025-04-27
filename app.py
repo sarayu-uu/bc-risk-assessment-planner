@@ -416,9 +416,16 @@ You are a helpful assistant knowledgeable about breast cancer. Use the provided 
                     print("Initializing chat session with context.") # Debug print
                     # Ensure gemini_model is not None before calling start_chat
                     if gemini_model:
-                        st.session_state.chat_session = gemini_model.start_chat(history=initial_history)
+                        try:
+                            st.session_state.chat_session = gemini_model.start_chat(history=initial_history)
+                            print("Chat session initialized successfully")
+                        except Exception as e:
+                            st.error(f"Error initializing chat: {e}")
+                            print(f"Error initializing chat: {e}")
+                            st.session_state.chat_session = None
                     else:
-                         st.warning("Gemini model not available for chat.")
+                         st.warning("Gemini model not available for chat. Please check your API key.")
+                         print("Gemini model is None, cannot initialize chat")
                          # Optionally hide the input if model is None
                 if "messages" not in st.session_state:
                     print("Initializing chat messages with context.") # Debug print
@@ -463,16 +470,27 @@ You are a helpful assistant knowledgeable about breast cancer. Use the provided 
                             try:
                                 with st.spinner("Thinking..."):
                                     # Send message to the existing chat session
+                                    print("Sending message to chat session...")
                                     response = st.session_state.chat_session.send_message(prompt)
                                     full_response = response.text
+                                    print(f"Response received: {full_response[:50]}...")
                                     message_placeholder.markdown(full_response)
                                     # Add AI response to session state messages for display
                                     st.session_state.messages.append({"role": "assistant", "parts": [full_response]})
-                                    print("Assistant responded.") # Debug print
+                                    print("Assistant responded successfully.") # Debug print
                             except Exception as e:
                                 full_response = f"Sorry, an error occurred: {e}"
                                 message_placeholder.error(full_response)
-                                print(f"Chatbot Error: {e}") # Debug print
+                                print(f"Chatbot Error details: {e}") # Debug print
+                                
+                                # Try to reinitialize the chat session
+                                try:
+                                    print("Attempting to reinitialize chat session...")
+                                    st.session_state.chat_session = gemini_model.start_chat(history=initial_history)
+                                    message_placeholder.warning("Chat session reinitialized. Please try again.")
+                                except Exception as reinit_error:
+                                    print(f"Failed to reinitialize chat: {reinit_error}")
+                                    
                                 # Add error message to history for context if needed
                                 # st.session_state.messages.append({"role": "assistant", "parts": [full_response]})
                 else:

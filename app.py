@@ -5,6 +5,23 @@ import json
 import os
 import random # Ensure random is imported
 
+# Direct Gemini API implementation
+try:
+    import google.generativeai as genai
+    
+    # Configure Gemini API with direct API key
+    DIRECT_API_KEY = "AIzaSyCKp-JCh3Gmy_gc81Z2geEjwLve2np65T8"
+    genai.configure(api_key=DIRECT_API_KEY)
+    
+    # Create a direct model instance
+    DIRECT_GEMINI_MODEL = genai.GenerativeModel('gemini-1.5-flash')
+    DIRECT_GEMINI_AVAILABLE = True
+    print("Direct Gemini API configured successfully")
+except Exception as e:
+    print(f"Error configuring direct Gemini API: {e}")
+    DIRECT_GEMINI_MODEL = None
+    DIRECT_GEMINI_AVAILABLE = False
+
 # Import the assessment function and constants from our utility files
 from risk_assessment_utils import (
     assess_risk_and_plan,
@@ -371,11 +388,14 @@ if st.session_state.get('show_results', False):
         # --- Add Separator --- 
         st.divider()
 
-        # --- AI Chatbot Section (Always displayed) ---
+        # --- AI Chatbot Section (Using direct implementation) ---
         st.subheader("AI Chatbot") # Keep subheader outside expander
 
-        # Force the chatbot to be available
-        print("AI Chatbot section available.") # Debug print
+        if not DIRECT_GEMINI_AVAILABLE:
+            st.info("💡 AI Chatbot requires setup: Add a valid GOOGLE_API_KEY to your .env file. See README.md for instructions.")
+            print("Direct Gemini API not available")
+        else:
+            print("Direct Gemini API available, showing chatbot") # Debug print
             # Use an expander for the chatbot
             with st.expander("🤖 Ask the AI Chatbot a Question (Beta)"):
                 st.markdown("Ask general questions about breast cancer using the context of the plan above. **Note:** Informational responses only, not medical advice.")
@@ -413,37 +433,13 @@ You are a helpful assistant knowledgeable about breast cancer. Use the provided 
                 if "chat_session" not in st.session_state:
                     print("Initializing chat session with context.") # Debug print
                     
-                    # Try to initialize with the gemini_model
-                    if gemini_model:
-                        try:
-                            st.session_state.chat_session = gemini_model.start_chat(history=initial_history)
-                            print("Chat session initialized successfully with Gemini model")
-                        except Exception as e:
-                            print(f"Error initializing chat with Gemini model: {e}")
-                            # Fall back to direct initialization
-                            try:
-                                # Try direct initialization with API key
-                                import google.generativeai as genai
-                                API_KEY = "AIzaSyCKp-JCh3Gmy_gc81Z2geEjwLve2np65T8"
-                                genai.configure(api_key=API_KEY)
-                                direct_model = genai.GenerativeModel('gemini-1.5-flash')
-                                st.session_state.chat_session = direct_model.start_chat(history=initial_history)
-                                print("Chat session initialized successfully with direct model")
-                            except Exception as direct_error:
-                                print(f"Error with direct initialization: {direct_error}")
-                                st.session_state.chat_session = None
-                    else:
-                        try:
-                            # Try direct initialization with API key
-                            import google.generativeai as genai
-                            API_KEY = "AIzaSyCKp-JCh3Gmy_gc81Z2geEjwLve2np65T8"
-                            genai.configure(api_key=API_KEY)
-                            direct_model = genai.GenerativeModel('gemini-1.5-flash')
-                            st.session_state.chat_session = direct_model.start_chat(history=initial_history)
-                            print("Chat session initialized successfully with direct model")
-                        except Exception as direct_error:
-                            print(f"Error with direct initialization: {direct_error}")
-                            st.session_state.chat_session = None
+                    # Use our direct implementation
+                    try:
+                        st.session_state.chat_session = DIRECT_GEMINI_MODEL.start_chat(history=initial_history)
+                        print("Chat session initialized successfully with direct Gemini model")
+                    except Exception as e:
+                        print(f"Error initializing chat with direct Gemini model: {e}")
+                        st.session_state.chat_session = None
                 if "messages" not in st.session_state:
                     print("Initializing chat messages with context.") # Debug print
                     st.session_state.messages = initial_history # Start display history with context
@@ -489,17 +485,14 @@ You are a helpful assistant knowledgeable about breast cancer. Use the provided 
                                     if "chat_session" not in st.session_state or st.session_state.chat_session is None:
                                         print("Chat session not found, creating a new one...")
                                         try:
-                                            # Try direct initialization with API key
-                                            import google.generativeai as genai
-                                            API_KEY = "AIzaSyCKp-JCh3Gmy_gc81Z2geEjwLve2np65T8"
-                                            genai.configure(api_key=API_KEY)
-                                            direct_model = genai.GenerativeModel('gemini-1.5-flash')
-                                            st.session_state.chat_session = direct_model.start_chat(history=initial_history)
-                                            print("Chat session created successfully")
+                                            # Use our direct implementation
+                                            st.session_state.chat_session = DIRECT_GEMINI_MODEL.start_chat(history=initial_history)
+                                            print("Chat session created successfully with direct model")
                                         except Exception as init_error:
                                             print(f"Error creating chat session: {init_error}")
                                             message_placeholder.error(f"Could not initialize chat: {init_error}")
-                                            return
+                                            # Skip the rest of the chat processing
+                                            st.stop()
                                     
                                     # Send message to the existing chat session
                                     print("Sending message to chat session...")
@@ -515,14 +508,10 @@ You are a helpful assistant knowledgeable about breast cancer. Use the provided 
                                 message_placeholder.error(full_response)
                                 print(f"Chatbot Error details: {e}") # Debug print
                                 
-                                # Try to reinitialize the chat session with direct API key
+                                # Try to reinitialize the chat session with our direct implementation
                                 try:
-                                    print("Attempting to reinitialize chat session with direct API key...")
-                                    import google.generativeai as genai
-                                    API_KEY = "AIzaSyCKp-JCh3Gmy_gc81Z2geEjwLve2np65T8"
-                                    genai.configure(api_key=API_KEY)
-                                    direct_model = genai.GenerativeModel('gemini-1.5-flash')
-                                    st.session_state.chat_session = direct_model.start_chat(history=initial_history)
+                                    print("Attempting to reinitialize chat session with direct implementation...")
+                                    st.session_state.chat_session = DIRECT_GEMINI_MODEL.start_chat(history=initial_history)
                                     message_placeholder.warning("Chat session reinitialized. Please try again.")
                                 except Exception as reinit_error:
                                     print(f"Failed to reinitialize chat: {reinit_error}")

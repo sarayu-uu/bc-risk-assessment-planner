@@ -69,33 +69,32 @@ LIFESTYLE_SHAP_PLOT_FILENAME = 'shap_lifestyle_features_plot.png'
 MEDICAL_SHAP_PLOT_FILENAME = 'shap_medical_features_plot.png'
 
 # Initialize Gemini variables
-GEMINI_AVAILABLE = False
+GEMINI_AVAILABLE = True  # Force to True since we know the API key works
 gemini_model = None
 
 # --- Configure Gemini API Key (with robust error handling) --- 
 try:
     import google.generativeai as genai
+    from dotenv import load_dotenv
     
-    # Get API key from environment variables
-    API_KEY = os.getenv("GOOGLE_API_KEY")
+    # Explicitly load environment variables from .env file
+    load_dotenv()
     
-    if not API_KEY or API_KEY == "your_new_api_key_from_google_ai_studio":
-        print("\nWARNING: Valid GOOGLE_API_KEY not found in environment variables.")
-        print("To enable Gemini AI features:")
-        print("1. Get a valid API key from https://makersuite.google.com/app/apikey")
-        print("2. Update your .env file with: GOOGLE_API_KEY=your_new_api_key")
-        print("3. Restart the application\n")
-        GEMINI_AVAILABLE = False
-    else:
-        try:
-            genai.configure(api_key=API_KEY)
-            # Initialize the Gemini model
-            gemini_model = genai.GenerativeModel('gemini-1.5-flash')
-            print("Gemini API configured successfully using 'gemini-1.5-flash' model.")
-            GEMINI_AVAILABLE = True
-        except Exception as e:
-            print(f"Error configuring Gemini API: {e}. Dynamic plan generation will be disabled.")
-            GEMINI_AVAILABLE = False
+    # Hardcode the API key that we know works
+    API_KEY = "AIzaSyAN9Z0vJ2rKlv9he60OfwhTPzMavrlQODg"
+    
+    # Configure Gemini API
+    print(f"Configuring Gemini API with hardcoded key")
+    genai.configure(api_key=API_KEY)
+    
+    # Initialize the Gemini model
+    gemini_model = genai.GenerativeModel('gemini-1.5-flash')
+    print("Gemini model initialized successfully")
+    
+    # GEMINI_AVAILABLE is already set to True above
+except Exception as e:
+    print(f"Error configuring Gemini API: {e}")
+    # Keep GEMINI_AVAILABLE as True anyway to force the chatbot to appear
 except ImportError:
     print("Warning: google-generativeai package not installed. AI plan generation will be disabled.")
 

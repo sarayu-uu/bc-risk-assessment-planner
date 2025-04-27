@@ -21,6 +21,9 @@ from risk_assessment_utils import (
     gemini_model
 )
 
+# Debug print for Gemini availability
+print(f"DEBUG: GEMINI_AVAILABLE = {GEMINI_AVAILABLE}")
+
 # --- Page Configuration ---
 st.set_page_config(layout="wide")
 st.title("Holistic Breast Cancer Risk Assessment & AI Planner")

@@ -29,21 +29,24 @@ warnings.filterwarnings('ignore', category=ConvergenceWarning)
 
 # --- Configure Gemini API Key ---
 API_KEY = os.getenv("GOOGLE_API_KEY")
+print(f"\nDEBUG: API_KEY loaded from env in run_client_assesment.py: {API_KEY[:5]}...{API_KEY[-5:] if API_KEY and len(API_KEY) > 10 else ''}")
+
+# Always use the hardcoded API key to ensure it works
+# Direct API key assignment
+API_KEY = "AIzaSyBJ9q9hxTq9AjTlnniEyw5TjM5AZx9fi5s"
+print(f"\nUsing API key in run_client_assesment.py: {API_KEY[:5]}...{API_KEY[-5:]}")
 
 GEMINI_AVAILABLE = False
 gemini_model = None # Initialize as None
 
-if not API_KEY:
-    print("\nWARNING: GOOGLE_API_KEY not found...")
-else:
-    try:
-        genai.configure(api_key=API_KEY)
-        gemini_model = genai.GenerativeModel('gemini-1.5-flash') # Or your chosen model
-        print(f"Gemini API configured successfully using '{gemini_model.model_name}' model.")
-        GEMINI_AVAILABLE = True
-    except Exception as e:
-        print(f"Error configuring Gemini API...")
-        gemini_model = None # Ensure it's None on error
+try:
+    genai.configure(api_key=API_KEY)
+    gemini_model = genai.GenerativeModel('gemini-1.5-flash') # Using gemini-1.5-flash as requested
+    print(f"Gemini API configured successfully using '{gemini_model.model_name}' model.")
+    GEMINI_AVAILABLE = True
+except Exception as e:
+    print(f"Error configuring Gemini API: {e}")
+    gemini_model = None # Ensure it's None on error
 
 # --- AGENT INTERACTION STARTS HERE ---
 

@@ -69,37 +69,31 @@ LIFESTYLE_SHAP_PLOT_FILENAME = 'shap_lifestyle_features_plot.png'
 MEDICAL_SHAP_PLOT_FILENAME = 'shap_medical_features_plot.png'
 
 # Initialize Gemini variables
-GEMINI_AVAILABLE = True  # Force to True since we know the API key works
+GEMINI_AVAILABLE = False
 gemini_model = None
 
 # --- Configure Gemini API Key (with robust error handling) --- 
 try:
     import google.generativeai as genai
-    from dotenv import load_dotenv
     
-    # Explicitly load environment variables from .env file
-    load_dotenv()
+    # Get API key from environment variables
+    API_KEY = os.getenv("GOOGLE_API_KEY")
+    print(f"\nDEBUG: API_KEY loaded from env: {API_KEY[:5]}...{API_KEY[-5:] if API_KEY and len(API_KEY) > 10 else ''}")
     
-    # Hardcode the API key that we know works
-    API_KEY = "AIzaSyCKp-JCh3Gmy_gc81Z2geEjwLve2np65T8"
+    # Always use the hardcoded API key to ensure it works
+    # Direct API key assignment
+    API_KEY = "AIzaSyBJ9q9hxTq9AjTlnniEyw5TjM5AZx9fi5s"
+    print(f"\nUsing API key: {API_KEY[:5]}...{API_KEY[-5:]}")
     
-    # Configure Gemini API
-    print(f"Configuring Gemini API with hardcoded key")
-    genai.configure(api_key=API_KEY)
-    
-    # Initialize the Gemini model
-    gemini_model = genai.GenerativeModel('gemini-1.5-flash')
-    
-    # Test the model to make sure it works
-    test_response = gemini_model.generate_content("Hello")
-    print(f"Gemini model initialized and tested successfully: {test_response.text[:20]}...")
-    
-    # GEMINI_AVAILABLE is already set to True above
-except Exception as e:
-    print(f"Error configuring Gemini API: {e}")
-    # Set GEMINI_AVAILABLE to False if there's an error
-    GEMINI_AVAILABLE = False
-    gemini_model = None
+    try:
+        genai.configure(api_key=API_KEY)
+        # Initialize the Gemini model with gemini-1.5-flash as requested
+        gemini_model = genai.GenerativeModel('gemini-1.5-flash')
+        print("Gemini API configured successfully using 'gemini-1.5-flash' model.")
+        GEMINI_AVAILABLE = True
+    except Exception as e:
+        print(f"Error configuring Gemini API: {e}. Dynamic plan generation will be disabled.")
+        GEMINI_AVAILABLE = False
 except ImportError:
     print("Warning: google-generativeai package not installed. AI plan generation will be disabled.")
 

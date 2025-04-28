@@ -2,7 +2,7 @@
     "model_name": "Breast Cancer Risk Assessment with NHANES-Based Risk Factors",
     "best_model_type": "Tuned Gradient Boosting",
     "version": "3.0",
-    "creation_date": "2025-04-27 20:52:46",
+    "creation_date": "2025-04-28 09:55:56",
     "risk_score_interpretation": "Risk score represents probability of malignancy (class 0). Higher score = higher cancer risk.",
     "data_sources": {
         "tumor_characteristics": "Wisconsin Breast Cancer Dataset (UCI)",
@@ -37,7 +37,7 @@
     },
     "hyperparameter_tuning_details (GB)": {
         "method": "RandomizedSearchCV",
-        "params_searched": "{'n_estimators': <scipy.stats._distn_infrastructure.rv_discrete_frozen object at 0x00000197F6C55550>, 'learning_rate': [0.01, 0.05, 0.1, 0.2], 'max_depth': <scipy.stats._distn_infrastructure.rv_discrete_frozen object at 0x00000197F6C49E50>}",
+        "params_searched": "{'n_estimators': <scipy.stats._distn_infrastructure.rv_discrete_frozen object at 0x000001F0FAB8B8C0>, 'learning_rate': [0.01, 0.05, 0.1, 0.2], 'max_depth': <scipy.stats._distn_infrastructure.rv_discrete_frozen object at 0x000001F0FAB7BD90>}",
         "best_params": {
             "learning_rate": 0.1,
             "max_depth": 6,
